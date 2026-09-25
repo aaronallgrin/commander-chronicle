@@ -1,0 +1,1421 @@
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Commander Chronicle</title>
+
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --panel: #151924;
+      --panel-2: #1d2230;
+      --border: #343b50;
+      --text: #f1ead9;
+      --muted: #9ca4b7;
+      --gold: #d7a94b;
+      --gold-light: #f1d078;
+      --red: #d35f68;
+      --green: #72c58d;
+      --purple: #8e74d6;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+    }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(142, 116, 214, 0.16), transparent 32rem),
+        radial-gradient(circle at 100% 20%, rgba(215, 169, 75, 0.1), transparent 28rem),
+        var(--bg);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .app {
+      width: min(100%, 760px);
+      margin: 0 auto;
+      padding: 20px 14px 48px;
+    }
+
+    .brand {
+      margin: 8px 0 24px;
+      text-align: center;
+    }
+
+    .brand-mark {
+      color: var(--gold-light);
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin: 8px 0 4px;
+      font-size: clamp(1.7rem, 7vw, 2.5rem);
+      letter-spacing: 0.04em;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 1.5rem;
+      color: var(--gold-light);
+    }
+
+    .subtitle,
+    .hint {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .subtitle {
+      margin-bottom: 0;
+      font-style: italic;
+    }
+
+    .screen {
+      display: none;
+      animation: rise 180ms ease-out;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel,
+    .player-setup,
+    .player-card,
+    .summary-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      margin-bottom: 16px;
+      padding: 18px;
+    }
+
+    .player-setup {
+      position: relative;
+      margin: 14px 0;
+      padding: 16px;
+    }
+
+    .player-setup legend {
+      padding: 0 8px;
+      color: var(--gold-light);
+      font-weight: bold;
+    }
+
+    .field {
+      margin: 12px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.02em;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+      color: var(--text);
+      background: #0d1017;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(215, 169, 75, 0.14);
+    }
+
+    .autocomplete {
+      position: relative;
+    }
+
+    .suggestions {
+      position: absolute;
+      z-index: 10;
+      top: calc(100% + 4px);
+      right: 0;
+      left: 0;
+      display: none;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #11151f;
+      box-shadow: var(--shadow);
+    }
+
+    .suggestions.visible {
+      display: block;
+    }
+
+    .suggestion {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(52, 59, 80, 0.65);
+      background: transparent;
+      color: var(--text);
+    }
+
+    .suggestion:last-child {
+      border-bottom: 0;
+    }
+
+    .suggestion:hover,
+    .suggestion:focus {
+      background: var(--panel-2);
+      color: var(--gold-light);
+    }
+
+    .selected-card {
+      display: none;
+      margin-top: 7px;
+      color: var(--green);
+      font-size: 0.86rem;
+    }
+
+    .selected-card.visible {
+      display: block;
+    }
+
+    .primary,
+    .secondary,
+    .ghost,
+    .danger {
+      min-height: 46px;
+      border-radius: 11px;
+      padding: 11px 16px;
+      font-weight: bold;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    .primary:hover,
+    .secondary:hover,
+    .ghost:hover,
+    .danger:hover {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      width: 100%;
+      color: #211807;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    }
+
+    .secondary {
+      color: #171324;
+      background: var(--purple);
+    }
+
+    .ghost {
+      border: 1px solid var(--border);
+      background: transparent;
+    }
+
+    .danger {
+      color: white;
+      background: var(--red);
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .error {
+      display: none;
+      margin: 12px 0 0;
+      color: #ff9a9d;
+      line-height: 1.4;
+    }
+
+    .error.visible {
+      display: block;
+    }
+
+    .game-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      padding: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--gold-light);
+      font-size: 2rem;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .player-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin: 12px 0;
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
+      box-shadow: none;
+    }
+
+    .player-card.eliminated {
+      opacity: 0.58;
+      filter: grayscale(0.5);
+    }
+
+    .player-name {
+      margin-bottom: 4px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .commander {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-block;
+      margin: 7px 5px 0 0;
+      padding: 3px 7px;
+      border-radius: 20px;
+      color: #16120c;
+      background: var(--gold-light);
+      font-family: system-ui, sans-serif;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+
+    .badge.status {
+      color: var(--text);
+      background: var(--green);
+    }
+
+    .badge.dead {
+      color: white;
+      background: var(--red);
+    }
+
+    .eliminate {
+      min-height: 42px;
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: white;
+      background: var(--red);
+      font-size: 0.84rem;
+      font-weight: bold;
+    }
+
+    .eliminate:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .turn-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .json-output {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      color: #d9e3d1;
+      background: #090c11;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .winner {
+      padding: 22px 16px;
+      text-align: center;
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at center, rgba(215, 169, 75, 0.19), transparent 65%),
+        var(--panel);
+    }
+
+    .winner-trophy {
+      font-size: 3.5rem;
+    }
+
+    .winner h2 {
+      margin-bottom: 4px;
+    }
+
+    .winner-name {
+      color: var(--gold-light);
+      font-size: 1.6rem;
+      font-weight: bold;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      right: 16px;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      left: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 13px 18px;
+      border-radius: 999px;
+      color: white;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      background: #238b55;
+    }
+
+    .toast.failure {
+      background: #b83f4a;
+    }
+
+    .toast-icon {
+      display: inline-grid;
+      width: 22px;
+      height: 22px;
+      place-items: center;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      font-size: 0.8rem;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      z-index: 200;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      animation: fadeIn 120ms ease-out;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+      align-items: flex-end;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal-content {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-bottom: 0;
+      border-radius: 20px 20px 0 0;
+      padding: 24px 18px;
+      animation: slideUp 180ms ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .modal-content h3 {
+      margin: 0 0 16px;
+      font-size: 1.3rem;
+      text-align: center;
+    }
+
+    .modal-content .field {
+      margin: 16px 0;
+    }
+
+    .modal-content input[type="number"] {
+      font-size: 1.1rem;
+      text-align: center;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .player-count-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .player-count-btn {
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.1rem;
+      font-weight: bold;
+      transition: all 120ms ease;
+    }
+
+    .player-count-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .player-count-btn.selected {
+      border-color: var(--gold);
+      background: rgba(215, 169, 75, 0.15);
+      color: var(--gold-light);
+    }
+
+    .draw-player-option {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      margin: 8px 0;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 120ms ease;
+    }
+
+    .draw-player-option:hover {
+      border-color: var(--gold);
+      background: rgba(215, 169, 75, 0.1);
+    }
+
+    .draw-player-option input[type="checkbox"] {
+      width: auto;
+      min-height: auto;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: var(--gold);
+    }
+
+    .draw-player-option label {
+      flex: 1;
+      margin: 0;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    @media (min-width: 560px) {
+      .player-setup {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 14px;
+      }
+
+      .player-setup legend {
+        grid-column: 1 / -1;
+      }
+
+      .player-setup .field:first-of-type {
+        grid-column: 1 / -1;
+      }
+
+      .actions {
+        grid-template-columns: 1fr auto;
+      }
+
+      .actions .primary {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <span id="toastIcon" class="toast-icon"></span>
+    <span id="toastMessage"></span>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal-content">
+      <h3 id="modalTitle"></h3>
+      <div class="field">
+        <label for="eliminationTurn">What turn were they eliminated on?</label>
+        <input
+          id="eliminationTurn"
+          type="number"
+          min="1"
+          max="999"
+          placeholder="Enter turn number"
+        />
+      </div>
+      <div class="modal-actions">
+        <button class="ghost" type="button" id="modalCancel">Cancel</button>
+        <button class="danger" type="button" id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawModalOverlay" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Game Ended in a Draw</h3>
+      <p class="hint" style="text-align: center; margin-bottom: 16px;">
+        Select all players who tied for the victory.
+      </p>
+      <div id="drawPlayerList" style="margin: 16px 0;"></div>
+      <div class="modal-actions">
+        <button class="ghost" type="button" id="drawCancel">Cancel</button>
+        <button class="primary" type="button" id="drawConfirm">Confirm Draw</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="app">
+    <header class="brand">
+      <div class="brand-mark">✦ ◈ ✦</div>
+      <h1>Commander Chronicle</h1>
+      <p class="subtitle">Record the battle. Remember the legend.</p>
+    </header>
+
+    <section id="setupScreen" class="screen active">
+      <div class="panel">
+        <h2>Prepare the Table</h2>
+        <p class="hint">
+          Select number of players, enter details, and choose commanders from Scryfall.
+        </p>
+
+        <form id="setupForm" novalidate>
+          <div class="field">
+            <label>How many players?</label>
+            <div class="player-count-selector">
+              <button class="player-count-btn" type="button" data-count="3">3</button>
+              <button class="player-count-btn" type="button" data-count="4">4</button>
+              <button class="player-count-btn" type="button" data-count="5">5</button>
+              <button class="player-count-btn" type="button" data-count="6">6</button>
+            </div>
+          </div>
+
+          <div id="playerForms"></div>
+
+          <p id="setupError" class="error" role="alert"></p>
+
+          <div class="actions">
+            <button class="primary" type="submit" disabled id="submitBtn">Begin Game</button>
+            <button class="ghost" type="button" id="resetForm">Clear Form</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="game-header">
+        <div class="stat">
+          <strong id="aliveCount">4</strong>
+          <span>Players alive</span>
+        </div>
+        <div class="stat">
+          <strong id="matchId">—</strong>
+          <span>Match ID</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Battlefield</h2>
+        <p class="hint">Click a player's Eliminate button to record their elimination turn.</p>
+        <div id="playerCards"></div>
+
+        <div class="turn-controls">
+          <button class="ghost" type="button" id="declareDrawBtn">Declare Draw</button>
+          <button class="ghost" type="button" id="endGameNow">Declare Winner</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="endScreen" class="screen">
+      <div class="winner">
+        <div class="winner-trophy">🏆</div>
+        <h2 id="winnerTitle">The Victor</h2>
+        <div class="winner-name" id="winnerName"></div>
+        <p class="hint" id="winnerDetails"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Game JSON</h2>
+        <p class="hint">
+          This object is ready to POST to a Google Apps Script web app endpoint.
+        </p>
+        <textarea id="jsonOutput" class="json-output" readonly></textarea>
+
+        <div class="actions">
+          <button class="primary" type="button" id="copyJson">Copy JSON</button>
+          <button class="secondary" type="button" id="postJson">POST to Apps Script</button>
+          <button class="ghost" type="button" id="newGame">Start New Game</button>
+        </div>
+
+        <p id="postStatus" class="error" role="status"></p>
+      </div>
+    </section>
+  </main>
+
+   <script>
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznnx1L0dwMzVNzcuBGDs7ElejfyxpEttdJlKkl5_c5_QlpyaObEOwGmp7_i7bIiZk0/exec";
+
+    const playerForms = document.getElementById("playerForms");
+    const setupForm = document.getElementById("setupForm");
+    const setupError = document.getElementById("setupError");
+    const playerCards = document.getElementById("playerCards");
+    const jsonOutput = document.getElementById("jsonOutput");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const eliminationTurn = document.getElementById("eliminationTurn");
+    const submitBtn = document.getElementById("submitBtn");
+
+    let game = null;
+    let suggestionTimers = [];
+    let playerCount = 4;
+    let pendingEliminationIndex = null;
+
+    const BRACKET_NAMES = {
+      "p": "Precon",
+      "1": "Exhibition",
+      "2": "Core",
+      "3": "Upgraded",
+      "4": "Optimized",
+      "5": "cEDH"
+    };
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function getLocalDateString() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}_${month}_${day}`;
+    }
+
+    function createDailyGameId() {
+      const dateKey = getLocalDateString();
+      const storageKey = `commander-game-count-${dateKey}`;
+
+      const previousCount = Number(localStorage.getItem(storageKey) || 0);
+      const gameNumber = previousCount + 1;
+
+      localStorage.setItem(storageKey, String(gameNumber));
+
+      return {
+        match_id: `${dateKey}_${String(gameNumber).padStart(2, "0")}`,
+        game_number: gameNumber,
+        date: dateKey
+      };
+    }
+
+    function makeOptions(start, end, placeholder) {
+      let html = `<option value="">${placeholder}</option>`;
+      for (let i = start; i <= end; i++) {
+        html += `<option value="${i}">${i}</option>`;
+      }
+      return html;
+    }
+
+    function showToast(message, type) {
+      const toast = document.getElementById("toast");
+      const icon = document.getElementById("toastIcon");
+      const messageEl = document.getElementById("toastMessage");
+
+      window.clearTimeout(showToast.timeout);
+
+      toast.classList.remove("visible", "success", "failure");
+      toast.classList.add(type === "success" ? "success" : "failure");
+
+      icon.textContent = type === "success" ? "✓" : "✕";
+      messageEl.textContent = message;
+
+      requestAnimationFrame(() => {
+        toast.classList.add("visible");
+      });
+
+      showToast.timeout = window.setTimeout(() => {
+        toast.classList.remove("visible");
+      }, 3000);
+    }
+
+    document.querySelectorAll(".player-count-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const count = Number(btn.dataset.count);
+
+        document.querySelectorAll(".player-count-btn").forEach((b) => {
+          b.classList.remove("selected");
+        });
+
+        btn.classList.add("selected");
+        playerCount = count;
+        submitBtn.disabled = false;
+
+        renderSetupForm(count);
+      });
+    });
+
+    function renderSetupForm(count) {
+      playerForms.innerHTML = "";
+
+      for (let i = 0; i < count; i++) {
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "player-setup";
+        fieldset.innerHTML = `
+          <legend>Player ${i + 1}</legend>
+
+          <div class="field">
+            <label for="name-${i}">Player name</label>
+            <input
+              id="name-${i}"
+              name="name-${i}"
+              type="text"
+              autocomplete="off"
+              placeholder="e.g. Chandra"
+              required
+            />
+          </div>
+
+          <div class="field autocomplete">
+            <label for="commander-${i}">Commander</label>
+            <input
+              id="commander-${i}"
+              name="commander-${i}"
+              type="search"
+              autocomplete="off"
+              placeholder="Search Scryfall..."
+              required
+            />
+            <input id="commander-id-${i}" type="hidden" />
+            <input id="color-identity-${i}" type="hidden" />
+            <div id="suggestions-${i}" class="suggestions"></div>
+            <div id="selected-${i}" class="selected-card"></div>
+          </div>
+
+          <div class="field">
+            <label for="order-${i}">Turn order</label>
+            <select id="order-${i}" name="order-${i}" required>
+              ${makeOptions(1, count, "Choose")}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="bracket-${i}">Bracket</label>
+            <select id="bracket-${i}" name="bracket-${i}" required>
+              <option value="">Select bracket</option>
+              <option value="p">Precon</option>
+              <option value="1">Exhibition</option>
+              <option value="2">Core</option>
+              <option value="3">Upgraded</option>
+              <option value="4">Optimized</option>
+              <option value="5">cEDH</option>
+            </select>
+          </div>
+        `;
+
+        playerForms.appendChild(fieldset);
+
+        const commanderInput = fieldset.querySelector(`#commander-${i}`);
+        const suggestions = fieldset.querySelector(`#suggestions-${i}`);
+        const commanderId = fieldset.querySelector(`#commander-id-${i}`);
+        const colorIdentity = fieldset.querySelector(`#color-identity-${i}`);
+        const selected = fieldset.querySelector(`#selected-${i}`);
+
+        commanderInput.addEventListener("input", () => {
+          commanderId.value = "";
+          colorIdentity.value = "";
+          selected.classList.remove("visible");
+          clearTimeout(suggestionTimers[i]);
+
+          const query = commanderInput.value.trim();
+          if (query.length < 2) {
+            suggestions.classList.remove("visible");
+            suggestions.innerHTML = "";
+            return;
+          }
+
+          suggestionTimers[i] = setTimeout(() => {
+            fetchCommanderSuggestions(query, i);
+          }, 260);
+        });
+      }
+    }
+
+    async function fetchCommanderSuggestions(query, index) {
+      const suggestions = document.getElementById(`suggestions-${index}`);
+
+      try {
+        const response = await fetch(
+          `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`
+        );
+
+        if (!response.ok) throw new Error("Scryfall request failed");
+
+        const data = await response.json();
+        const names = (data.data || []).slice(0, 8);
+
+        suggestions.innerHTML = names.length
+          ? names.map((name) => `
+              <button class="suggestion" type="button" data-name="${escapeHtml(name)}">
+                ${escapeHtml(name)}
+              </button>
+            `).join("")
+          : `<div class="suggestion">No cards found</div>`;
+
+        suggestions.classList.add("visible");
+
+        suggestions.querySelectorAll("button[data-name]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const name = button.dataset.name;
+            const commanderInput = document.getElementById(`commander-${index}`);
+            const commanderId = document.getElementById(`commander-id-${index}`);
+            const colorIdentityInput = document.getElementById(`color-identity-${index}`);
+            const selected = document.getElementById(`selected-${index}`);
+
+            commanderInput.value = name;
+            commanderId.value = name;
+            selected.textContent = `Loading card details: ${name}...`;
+            selected.classList.add("visible");
+            suggestions.classList.remove("visible");
+
+            try {
+              const response = await fetch(
+                `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`
+              );
+
+              if (!response.ok) throw new Error("Unable to load card details");
+
+              const card = await response.json();
+
+              const colorIdentity = Array.isArray(card.color_identity)
+                ? card.color_identity.join(",")
+                : "";
+
+              colorIdentityInput.value = colorIdentity;
+
+              selected.textContent =
+                `✓ Selected: ${name}` +
+                (colorIdentity ? ` • ${colorIdentity}` : " • Colorless");
+            } catch (error) {
+              colorIdentityInput.value = "";
+              selected.textContent = `✓ Selected: ${name} • Color identity unavailable`;
+            }
+          });
+        });
+      } catch (error) {
+        suggestions.innerHTML =
+          `<div class="suggestion">Unable to reach Scryfall. You can still enter a name.</div>`;
+        suggestions.classList.add("visible");
+      }
+    }
+
+    function validateSetup() {
+      const players = [];
+      const names = new Set();
+      const orders = new Set();
+
+      for (let i = 0; i < playerCount; i++) {
+        const name = document.getElementById(`name-${i}`).value.trim();
+        const commander = document.getElementById(`commander-${i}`).value.trim();
+        const colorIdentity = document.getElementById(`color-identity-${i}`).value.trim();
+        const order = Number(document.getElementById(`order-${i}`).value);
+        const bracket = document.getElementById(`bracket-${i}`).value.trim();
+
+        if (!name || !commander || !order || !bracket) {
+          return "Complete every field for all players.";
+        }
+
+        if (names.has(name.toLowerCase())) {
+          return "Each player must have a unique name.";
+        }
+
+        if (orders.has(order)) {
+          return `Each turn order from 1–${playerCount} can only be used once.`;
+        }
+
+        names.add(name.toLowerCase());
+        orders.add(order);
+
+        players.push({
+          seat: order,
+          name,
+          commander,
+          color_identity: colorIdentity,
+          bracket,
+          eliminated: false,
+          eliminatedOnTurn: null
+        });
+      }
+
+      players.sort((a, b) => a.seat - b.seat);
+      return players;
+    }
+
+    document.addEventListener("click", (event) => {
+      document.querySelectorAll(".suggestions").forEach((suggestions) => {
+        if (!suggestions.parentElement.contains(event.target)) {
+          suggestions.classList.remove("visible");
+        }
+      });
+    });
+
+    setupForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const result = validateSetup();
+      if (typeof result === "string") {
+        setupError.textContent = result;
+        setupError.classList.add("visible");
+        return;
+      }
+
+      setupError.classList.remove("visible");
+
+      const dailyGame = createDailyGameId();
+
+      game = {
+        match_id: dailyGame.match_id,
+        game_number: dailyGame.game_number,
+        startedAt: new Date().toISOString(),
+        endedAt: null,
+        winner: null,
+        players: result
+      };
+
+      document.getElementById("matchId").textContent = game.match_id;
+      showScreen("gameScreen");
+      renderGame();
+    });
+
+    function renderGame() {
+      const alive = game.players.filter((player) => !player.eliminated);
+      document.getElementById("aliveCount").textContent = alive.length;
+
+      playerCards.innerHTML = game.players.map((player, index) => `
+        <article class="player-card ${player.eliminated ? "eliminated" : ""}">
+          <div>
+            <div class="player-name">${escapeHtml(player.name)}</div>
+            <div class="commander">${escapeHtml(player.commander)}</div>
+            <span class="badge">Seat ${player.seat}</span>
+            <span class="badge">${BRACKET_NAMES[player.bracket]}</span>
+            ${
+              player.eliminated
+                ? `<span class="badge dead">Eliminated on turn ${player.eliminatedOnTurn}</span>`
+                : `<span class="badge status">Alive</span>`
+            }
+          </div>
+          <button
+            class="eliminate"
+            type="button"
+            data-index="${index}"
+            ${player.eliminated ? "disabled" : ""}
+          >
+            ${player.eliminated ? "Eliminated" : "Eliminate"}
+          </button>
+        </article>
+      `).join("");
+
+      playerCards.querySelectorAll(".eliminate").forEach((button) => {
+        button.addEventListener("click", () => {
+          showEliminationModal(Number(button.dataset.index));
+        });
+      });
+    }
+
+    function showEliminationModal(index) {
+      pendingEliminationIndex = index;
+      const player = game.players[index];
+
+      modalTitle.textContent = `Eliminate ${escapeHtml(player.name)}?`;
+      eliminationTurn.value = "";
+      eliminationTurn.focus();
+
+      modalOverlay.classList.add("visible");
+    }
+
+    document.getElementById("modalCancel").addEventListener("click", () => {
+      modalOverlay.classList.remove("visible");
+      pendingEliminationIndex = null;
+    });
+
+    document.getElementById("modalConfirm").addEventListener("click", () => {
+      const turn = Number(eliminationTurn.value);
+
+      if (!turn || turn < 1) {
+        showToast("Please enter a valid turn number.", "failure");
+        return;
+      }
+
+      const player = game.players[pendingEliminationIndex];
+      player.eliminated = true;
+      player.eliminatedOnTurn = turn;
+
+      modalOverlay.classList.remove("visible");
+      pendingEliminationIndex = null;
+
+      const alive = game.players.filter((item) => !item.eliminated);
+      if (alive.length === 1) {
+        declareWinner(alive[0]);
+      } else {
+        renderGame();
+      }
+    });
+
+    eliminationTurn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("modalConfirm").click();
+      }
+    });
+
+    document.getElementById("declareDrawBtn").addEventListener("click", () => {
+      const alive = game.players.filter((player) => !player.eliminated);
+
+      if (alive.length < 2) {
+        showToast("Need at least 2 players alive to declare a draw.", "failure");
+        return;
+      }
+
+      showDrawModal(alive);
+    });
+
+    function showDrawModal(alivePlayers) {
+      const drawPlayerList = document.getElementById("drawPlayerList");
+
+      drawPlayerList.innerHTML = alivePlayers.map((player) => `
+        <label class="draw-player-option">
+          <input type="checkbox" class="draw-player-checkbox" data-name="${escapeHtml(player.name)}" />
+          <span>
+            <strong>${escapeHtml(player.name)}</strong> • ${escapeHtml(player.commander)}
+          </span>
+        </label>
+      `).join("");
+
+      document.getElementById("drawModalOverlay").classList.add("visible");
+    }
+
+    document.getElementById("drawCancel").addEventListener("click", () => {
+      document.getElementById("drawModalOverlay").classList.remove("visible");
+    });
+
+    document.getElementById("drawConfirm").addEventListener("click", () => {
+      const checkboxes = document.querySelectorAll(".draw-player-checkbox:checked");
+
+      if (checkboxes.length === 0) {
+        showToast("Select at least one player for the draw.", "failure");
+        return;
+      }
+
+      const selectedNames = Array.from(checkboxes).map((cb) => cb.dataset.name);
+
+      document.getElementById("drawModalOverlay").classList.remove("visible");
+      declareDraw(selectedNames);
+    });
+
+    function declareDraw(winnerNames) {
+      game.endedAt = new Date().toISOString();
+
+      const winnerList = winnerNames.join(", ");
+      document.getElementById("winnerTitle").textContent = "Draw";
+      document.getElementById("winnerName").textContent = `Draw Between ${winnerList}`;
+      document.getElementById("winnerDetails").textContent =
+        `${game.players.filter((p) => !p.eliminated).length} players remained`;
+
+      const rows = game.players.map((player) => {
+        const isWinner = winnerNames.includes(player.name);
+        const isLoser = !isWinner && player.eliminated;
+
+        return {
+          match_id: game.match_id,
+          player_name: player.name,
+          commander_name: player.commander,
+          color_identity: player.color_identity || "",
+          bracket: player.bracket,
+          turn_order: player.seat,
+          eliminated_turn: isLoser ? player.eliminatedOnTurn : "",
+          win: isWinner ? 1 : 0,
+          win_turn: isWinner ? "Draw" : "",
+          draw: isWinner ? 1 : 0
+        };
+      });
+
+      game.rows = rows;
+      jsonOutput.value = JSON.stringify(rows, null, 2);
+
+      showScreen("endScreen");
+    }
+
+    document.getElementById("endGameNow").addEventListener("click", () => {
+      const alive = game.players.filter((player) => !player.eliminated);
+
+      if (alive.length !== 1) {
+        const firstAlive = alive[0];
+        const confirmed = window.confirm(
+          firstAlive
+            ? `There are ${alive.length} players alive. Declare ${firstAlive.name} the winner?`
+            : "There are no players alive. Declare a winner anyway?"
+        );
+
+        if (!confirmed) return;
+      }
+
+      declareWinner(alive[0] || null);
+    });
+
+    function declareWinner(winner) {
+      game.endedAt = new Date().toISOString();
+
+      document.getElementById("winnerTitle").textContent = "The Victor";
+      document.getElementById("winnerName").textContent =
+        winner ? winner.name : "No winner recorded";
+
+      document.getElementById("winnerDetails").textContent = winner
+        ? `${winner.commander} • ${BRACKET_NAMES[winner.bracket]}`
+        : `Game ended`;
+
+      // Find the turn the winner would have been eliminated on if they had lost
+      // This is the maximum elimination turn across all other players
+      const lastEliminationTurn = game.players
+        .filter(p => p.eliminated)
+        .map(p => p.eliminatedOnTurn)
+        .reduce((max, current) => Math.max(max, current), 0);
+
+      const rows = game.players.map((player) => {
+        const isWinner = winner && player.name === winner.name;
+        
+        return {
+          match_id: game.match_id,
+          player_name: player.name,
+          commander_name: player.commander,
+          color_identity: player.color_identity || "",
+          bracket: player.bracket,
+          turn_order: player.seat,
+          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || ""),
+          win: isWinner ? 1 : 0,
+          win_turn: isWinner ? lastEliminationTurn : "",
+          draw: 0
+        };
+      });
+
+      game.rows = rows;
+      jsonOutput.value = JSON.stringify(rows, null, 2);
+
+      showScreen("endScreen");
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach((screen) => {
+        screen.classList.toggle("active", screen.id === id);
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.getElementById("copyJson").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(jsonOutput.value);
+        const button = document.getElementById("copyJson");
+        button.textContent = "Copied!";
+        setTimeout(() => (button.textContent = "Copy JSON"), 1400);
+      } catch {
+        jsonOutput.select();
+        document.execCommand("copy");
+      }
+    });
+
+    document.getElementById("postJson").addEventListener("click", async () => {
+      const button = document.getElementById("postJson");
+      const status = document.getElementById("postStatus");
+
+      status.classList.remove("visible");
+
+      if (!game || !game.rows || !game.rows.length) {
+        status.textContent = "No game data available yet.";
+        status.classList.add("visible");
+        showToast("No game data available.", "failure");
+        return;
+      }
+
+      if (!GOOGLE_APPS_SCRIPT_URL) {
+        status.textContent =
+          "Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.";
+        status.classList.add("visible");
+        showToast("Google Apps Script URL is not configured.", "failure");
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Saving...";
+
+      try {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(game.rows)
+        });
+
+        status.textContent = "Game data submitted.";
+        status.style.color = "var(--green)";
+        status.classList.add("visible");
+        showToast("Game saved successfully.", "success");
+      } catch (error) {
+        console.error("Save failed:", error);
+
+        status.textContent =
+          "Game save failed. Check the Apps Script URL and your connection.";
+        status.style.color = "#ff9a9d";
+        status.classList.add("visible");
+        showToast("Game save failed.", "failure");
+      } finally {
+        button.disabled = false;
+        button.textContent = "POST to Apps Script";
+      }
+    });
+
+    document.getElementById("resetForm").addEventListener("click", () => {
+      setupForm.reset();
+      document.querySelectorAll(".player-count-btn").forEach((btn) => {
+        btn.classList.remove("selected");
+      });
+      submitBtn.disabled = true;
+      document.querySelectorAll(".selected-card").forEach((el) => {
+        el.classList.remove("visible");
+        el.textContent = "";
+      });
+      document.querySelectorAll(".suggestions").forEach((el) => {
+        el.classList.remove("visible");
+        el.innerHTML = "";
+      });
+      setupError.classList.remove("visible");
+      playerForms.innerHTML = "";
+    });
+
+    document.getElementById("newGame").addEventListener("click", () => {
+      game = null;
+      setupForm.reset();
+      document.querySelectorAll(".player-count-btn").forEach((btn) => {
+        btn.classList.remove("selected");
+      });
+      submitBtn.disabled = true;
+      playerForms.innerHTML = "";
+      showScreen("setupScreen");
+    });
+
+    renderSetupForm(playerCount);
+  </script>
+</body>
+</html>
