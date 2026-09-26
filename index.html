@@ -1,18 +1,10 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Commander Chronicle</title>
-<link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#d7a94b" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Commander" />
-<link rel="apple-touch-icon" href="android-chrome-192x192.png" />
+
   <style>
     :root {
       --bg: #0b0d12;
@@ -29,13 +21,9 @@
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html {
-      background: var(--bg);
-    }
+    html { background: var(--bg); }
 
     body {
       min-width: 320px;
@@ -49,12 +37,7 @@
       font-family: Georgia, "Times New Roman", serif;
     }
 
-    button,
-    input,
-    select {
-      font: inherit;
-    }
-
+    button, input, select { font: inherit; }
     button {
       border: 0;
       cursor: pointer;
@@ -78,12 +61,7 @@
       line-height: 1;
     }
 
-    h1,
-    h2,
-    h3,
-    p {
-      margin-top: 0;
-    }
+    h1, h2, h3, p { margin-top: 0; }
 
     h1 {
       margin: 8px 0 4px;
@@ -97,8 +75,7 @@
       color: var(--gold-light);
     }
 
-    .subtitle,
-    .hint {
+    .subtitle, .hint {
       color: var(--muted);
       line-height: 1.45;
     }
@@ -113,9 +90,7 @@
       animation: rise 180ms ease-out;
     }
 
-    .screen.active {
-      display: block;
-    }
+    .screen.active { display: block; }
 
     @keyframes rise {
       from {
@@ -128,20 +103,14 @@
       }
     }
 
-    .panel,
-    .player-setup,
-    .player-card,
-    .summary-card {
+    .panel, .player-setup, .player-card, .summary-card {
       border: 1px solid var(--border);
       border-radius: 16px;
       background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
       box-shadow: var(--shadow);
     }
 
-    .panel {
-      margin-bottom: 16px;
-      padding: 18px;
-    }
+    .panel { margin-bottom: 16px; padding: 18px; }
 
     .player-setup {
       position: relative;
@@ -155,9 +124,7 @@
       font-weight: bold;
     }
 
-    .field {
-      margin: 12px 0;
-    }
+    .field { margin: 12px 0; }
 
     label {
       display: block;
@@ -167,8 +134,7 @@
       letter-spacing: 0.02em;
     }
 
-    input,
-    select {
+    input, select {
       width: 100%;
       min-height: 44px;
       border: 1px solid var(--border);
@@ -179,15 +145,12 @@
       background: #0d1017;
     }
 
-    input:focus,
-    select:focus {
+    input:focus, select:focus {
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(215, 169, 75, 0.14);
     }
 
-    .autocomplete {
-      position: relative;
-    }
+    .autocomplete { position: relative; }
 
     .suggestions {
       position: absolute;
@@ -204,9 +167,7 @@
       box-shadow: var(--shadow);
     }
 
-    .suggestions.visible {
-      display: block;
-    }
+    .suggestions.visible { display: block; }
 
     .suggestion {
       display: block;
@@ -218,12 +179,9 @@
       color: var(--text);
     }
 
-    .suggestion:last-child {
-      border-bottom: 0;
-    }
+    .suggestion:last-child { border-bottom: 0; }
 
-    .suggestion:hover,
-    .suggestion:focus {
+    .suggestion:hover, .suggestion:focus {
       background: var(--panel-2);
       color: var(--gold-light);
     }
@@ -235,14 +193,9 @@
       font-size: 0.86rem;
     }
 
-    .selected-card.visible {
-      display: block;
-    }
+    .selected-card.visible { display: block; }
 
-    .primary,
-    .secondary,
-    .ghost,
-    .danger {
+    .primary, .secondary, .ghost, .danger {
       min-height: 46px;
       border-radius: 11px;
       padding: 11px 16px;
@@ -250,10 +203,7 @@
       transition: transform 120ms ease, filter 120ms ease;
     }
 
-    .primary:hover,
-    .secondary:hover,
-    .ghost:hover,
-    .danger:hover {
+    .primary:hover, .secondary:hover, .ghost:hover, .danger:hover {
       filter: brightness(1.12);
       transform: translateY(-1px);
     }
@@ -292,9 +242,7 @@
       line-height: 1.4;
     }
 
-    .error.visible {
-      display: block;
-    }
+    .error.visible { display: block; }
 
     .game-header {
       display: grid;
@@ -424,9 +372,7 @@
       font-size: 3.5rem;
     }
 
-    .winner h2 {
-      margin-bottom: 4px;
-    }
+    .winner h2 { margin-bottom: 4px; }
 
     .winner-name {
       color: var(--gold-light);
@@ -464,13 +410,8 @@
       transform: translateY(0);
     }
 
-    .toast.success {
-      background: #238b55;
-    }
-
-    .toast.failure {
-      background: #b83f4a;
-    }
+    .toast.success { background: #238b55; }
+    .toast.failure { background: #b83f4a; }
 
     .toast-icon {
       display: inline-grid;
@@ -500,12 +441,8 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .modal-content {
@@ -521,12 +458,8 @@
     }
 
     @keyframes slideUp {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
     }
 
     .modal-content h3 {
@@ -535,9 +468,7 @@
       text-align: center;
     }
 
-    .modal-content .field {
-      margin: 16px 0;
-    }
+    .modal-content .field { margin: 16px 0; }
 
     .modal-content input[type="number"] {
       font-size: 1.1rem;
@@ -619,27 +550,134 @@
         column-gap: 14px;
       }
 
-      .player-setup legend {
-        grid-column: 1 / -1;
-      }
-
-      .player-setup .field:first-of-type {
-        grid-column: 1 / -1;
-      }
+      .player-setup legend { grid-column: 1 / -1; }
+      .player-setup .field:first-of-type { grid-column: 1 / -1; }
 
       .actions {
         grid-template-columns: 1fr auto;
       }
 
-      .actions .primary {
-        grid-column: 1 / -1;
-      }
+      .actions .primary { grid-column: 1 / -1; }
     }
+  /* ── History Screen ───────────────────────────── */
+.history-game-card {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(29,34,48,0.97), rgba(15,18,27,0.97));
+  box-shadow: var(--shadow);
+}
+
+.history-game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-match-id {
+  color: var(--gold-light);
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.history-date {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.history-player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(52,59,80,0.45);
+  font-size: 0.88rem;
+  gap: 8px;
+}
+
+.history-player-row:last-child {
+  border-bottom: 0;
+}
+
+.history-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-player-name {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-commander-name {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-result {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.history-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.history-stat {
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.history-stat strong {
+  display: block;
+  color: var(--gold-light);
+  font-size: 1.5rem;
+}
+
+.history-stat span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.history-loading {
+  text-align: center;
+  padding: 30px;
+  color: var(--muted);
+}
+
+.history-filter {
+  margin-bottom: 16px;
+}
   </style>
 </head>
 
 <body>
-  
   <div id="toast" class="toast" role="status" aria-live="polite">
     <span id="toastIcon" class="toast-icon"></span>
     <span id="toastMessage"></span>
@@ -650,13 +688,7 @@
       <h3 id="modalTitle"></h3>
       <div class="field">
         <label for="eliminationTurn">What turn were they eliminated on?</label>
-        <input
-          id="eliminationTurn"
-          type="number"
-          min="1"
-          max="999"
-          placeholder="Enter turn number"
-        />
+        <input id="eliminationTurn" type="number" min="1" max="999" placeholder="Enter turn number" />
       </div>
       <div class="modal-actions">
         <button class="ghost" type="button" id="modalCancel">Cancel</button>
@@ -685,9 +717,11 @@
       <h1>Commander Chronicle</h1>
       <p class="subtitle">Record the battle. Remember the legend.</p>
     </header>
-<div style="text-align: center; margin: -16px 0 24px; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.05em;">
-  Created by aaronallgrin • Last update 2026/09/25
-</div>
+
+    <div style="text-align: center; margin: -16px 0 24px; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.05em;">
+      Created by aaronallgrin • Last update 2026/09/25
+    </div>
+
     <section id="setupScreen" class="screen active">
       <div class="panel">
         <h2>Prepare the Table</h2>
@@ -713,9 +747,10 @@
           <div class="actions">
             <button class="primary" type="submit" disabled id="submitBtn">Begin Game</button>
             <button class="ghost" type="button" id="resetForm">Clear Form</button>
+            <button class="ghost" type="button" id="viewHistory" style="width:100%; margin-top:2px;">
+              📜 Past Games
+            </button>
           </div>
-        </form>
-      </div>
     </section>
 
     <section id="gameScreen" class="screen">
@@ -741,7 +776,47 @@
         </div>
       </div>
     </section>
+<section id="historyScreen" class="screen">
+      <div class="panel">
+        <h2>📜 Past Games</h2>
 
+        <div class="history-stats-bar">
+          <div class="history-stat">
+            <strong id="histTotalGames">—</strong>
+            <span>Games</span>
+          </div>
+          <div class="history-stat">
+            <strong id="histTotalPlayers">—</strong>
+            <span>Unique Players</span>
+          </div>
+          <div class="history-stat">
+            <strong id="histAvgTurns">—</strong>
+            <span>Avg Win Turn</span>
+          </div>
+        </div>
+
+        <div class="history-filter field">
+          <label for="historyPlayerFilter">Filter by player name</label>
+          <input
+            id="historyPlayerFilter"
+            type="search"
+            placeholder="e.g. Aaron..."
+            autocomplete="off"
+          />
+        </div>
+
+        <div id="historyList"></div>
+
+        <div class="actions">
+          <button class="primary" type="button" id="refreshHistory">
+            🔄 Refresh
+          </button>
+          <button class="ghost" type="button" id="backFromHistory">
+            ← Back
+          </button>
+        </div>
+      </div>
+    </section>
     <section id="endScreen" class="screen">
       <div class="winner">
         <div class="winner-trophy">🏆</div>
@@ -768,7 +843,7 @@
     </section>
   </main>
 
-   <script>
+  <script>
     const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznnx1L0dwMzVNzcuBGDs7ElejfyxpEttdJlKkl5_c5_QlpyaObEOwGmp7_i7bIiZk0/exec";
 
     const playerForms = document.getElementById("playerForms");
@@ -1263,6 +1338,7 @@
       jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
+      saveGameRows();
     }
 
     document.getElementById("endGameNow").addEventListener("click", () => {
@@ -1293,16 +1369,14 @@
         ? `${winner.commander} • ${BRACKET_NAMES[winner.bracket]}`
         : `Game ended`;
 
-      // Find the turn the winner would have been eliminated on if they had lost
-      // This is the maximum elimination turn across all other players
       const lastEliminationTurn = game.players
-        .filter(p => p.eliminated)
-        .map(p => p.eliminatedOnTurn)
+        .filter((p) => p.eliminated)
+        .map((p) => p.eliminatedOnTurn)
         .reduce((max, current) => Math.max(max, current), 0);
 
       const rows = game.players.map((player) => {
         const isWinner = winner && player.name === winner.name;
-        
+
         return {
           match_id: game.match_id,
           player_name: player.name,
@@ -1321,6 +1395,59 @@
       jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
+      saveGameRows();
+    }
+
+    async function saveGameRows() {
+      const button = document.getElementById("postJson");
+      const status = document.getElementById("postStatus");
+
+      if (!game || !game.rows || !game.rows.length) {
+        status.textContent = "No game data available yet.";
+        status.style.color = "#ff9a9d";
+        status.classList.add("visible");
+        showToast("No game data available.", "failure");
+        return false;
+      }
+
+      if (!GOOGLE_APPS_SCRIPT_URL) {
+        status.textContent = "Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.";
+        status.style.color = "#ff9a9d";
+        status.classList.add("visible");
+        showToast("Google Apps Script URL is not configured.", "failure");
+        return false;
+      }
+
+      button.disabled = true;
+      button.textContent = "Saving...";
+
+      try {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(game.rows)
+        });
+
+        status.textContent = "Game data submitted.";
+        status.style.color = "var(--green)";
+        status.classList.add("visible");
+        showToast("Game saved successfully.", "success");
+        return true;
+      } catch (error) {
+        console.error("Save failed:", error);
+
+        status.textContent = "Game save failed. Check the Apps Script URL and your connection.";
+        status.style.color = "#ff9a9d";
+        status.classList.add("visible");
+        showToast("Game save failed.", "failure");
+        return false;
+      } finally {
+        button.disabled = false;
+        button.textContent = "POST to Apps Script";
+      }
     }
 
     function showScreen(id) {
@@ -1343,55 +1470,7 @@
     });
 
     document.getElementById("postJson").addEventListener("click", async () => {
-      const button = document.getElementById("postJson");
-      const status = document.getElementById("postStatus");
-
-      status.classList.remove("visible");
-
-      if (!game || !game.rows || !game.rows.length) {
-        status.textContent = "No game data available yet.";
-        status.classList.add("visible");
-        showToast("No game data available.", "failure");
-        return;
-      }
-
-      if (!GOOGLE_APPS_SCRIPT_URL) {
-        status.textContent =
-          "Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.";
-        status.classList.add("visible");
-        showToast("Google Apps Script URL is not configured.", "failure");
-        return;
-      }
-
-      button.disabled = true;
-      button.textContent = "Saving...";
-
-      try {
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify(game.rows)
-        });
-
-        status.textContent = "Game data submitted.";
-        status.style.color = "var(--green)";
-        status.classList.add("visible");
-        showToast("Game saved successfully.", "success");
-      } catch (error) {
-        console.error("Save failed:", error);
-
-        status.textContent =
-          "Game save failed. Check the Apps Script URL and your connection.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
-        showToast("Game save failed.", "failure");
-      } finally {
-        button.disabled = false;
-        button.textContent = "POST to Apps Script";
-      }
+      saveGameRows();
     });
 
     document.getElementById("resetForm").addEventListener("click", () => {
@@ -1422,7 +1501,180 @@
       playerForms.innerHTML = "";
       showScreen("setupScreen");
     });
+// ── History Feature ─────────────────────────────────────
 
+    document.getElementById("viewHistory").addEventListener("click", () => {
+      showScreen("historyScreen");
+      loadHistory();
+    });
+
+    document.getElementById("refreshHistory").addEventListener("click", () => {
+      loadHistory();
+    });
+
+    document.getElementById("backFromHistory").addEventListener("click", () => {
+      showScreen("setupScreen");
+    });
+
+    document.getElementById("historyPlayerFilter").addEventListener("input", () => {
+      renderHistoryList(cachedHistoryRows);
+    });
+
+    let cachedHistoryRows = [];
+
+    async function loadHistory() {
+      const historyList = document.getElementById("historyList");
+      historyList.innerHTML = `<div class="history-loading">⏳ Loading games...</div>`;
+
+      // Reset stats
+      ["histTotalGames","histTotalPlayers","histAvgTurns"].forEach(id => {
+        document.getElementById(id).textContent = "—";
+      });
+
+      try {
+        const response = await fetch(
+          `${GOOGLE_APPS_SCRIPT_URL}?action=history`
+        );
+
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.error || "Unknown error");
+
+        cachedHistoryRows = data.rows || [];
+
+        renderHistoryStats(cachedHistoryRows);
+        renderHistoryList(cachedHistoryRows);
+
+      } catch (error) {
+        console.error("History load failed:", error);
+        historyList.innerHTML = `
+          <div class="history-empty">
+            ❌ Could not load games.<br/>
+            <span style="font-size:0.82rem;">Check your connection and Apps Script deployment.</span>
+          </div>`;
+        showToast("Failed to load history.", "failure");
+      }
+    }
+
+    function renderHistoryStats(rows) {
+      if (!rows.length) return;
+
+      // Total unique games
+      const uniqueGames = new Set(rows.map(r => r.match_id)).size;
+
+      // Total unique players
+      const uniquePlayers = new Set(
+        rows.map(r => String(r.player_name).toLowerCase().trim())
+      ).size;
+
+      // Average win turn (only rows where win == 1 and win_turn is a number)
+      const winTurns = rows
+        .filter(r => (r.win == 1 || r.win === "1") && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
+        .map(r => Number(r.win_turn));
+
+      const avgTurns = winTurns.length
+        ? Math.round(winTurns.reduce((a, b) => a + b, 0) / winTurns.length)
+        : "—";
+
+      document.getElementById("histTotalGames").textContent = uniqueGames;
+      document.getElementById("histTotalPlayers").textContent = uniquePlayers;
+      document.getElementById("histAvgTurns").textContent = avgTurns;
+    }
+
+    function renderHistoryList(rows) {
+      const historyList = document.getElementById("historyList");
+      const filterValue = document.getElementById("historyPlayerFilter")
+        .value.trim().toLowerCase();
+
+      if (!rows.length) {
+        historyList.innerHTML = `
+          <div class="history-empty">
+            🎮 No games recorded yet.<br/>
+            <span style="font-size:0.82rem;">Play and save a game to see it here!</span>
+          </div>`;
+        return;
+      }
+
+      // Filter by player name if filter is set
+      const filteredRows = filterValue
+        ? rows.filter(r =>
+            String(r.player_name).toLowerCase().includes(filterValue)
+          )
+        : rows;
+
+      if (!filteredRows.length) {
+        historyList.innerHTML = `
+          <div class="history-empty">No games found for "${escapeHtml(filterValue)}"</div>`;
+        return;
+      }
+
+      // Group rows by match_id — preserve insertion order (sheet order)
+      const gamesMap = new Map();
+      filteredRows.forEach(row => {
+        const id = row.match_id;
+        if (!gamesMap.has(id)) gamesMap.set(id, []);
+        gamesMap.get(id).push(row);
+      });
+
+      // Reverse so most recent game appears first
+      const gameEntries = Array.from(gamesMap.entries()).reverse();
+
+      historyList.innerHTML = gameEntries.map(([matchId, players]) => {
+        // Parse date from match_id: YYYY_MM_DD_NN
+        const parts = String(matchId).split("_");
+        const dateStr = parts.length >= 3
+          ? `${parts[0]}/${parts[1]}/${parts[2]}`
+          : matchId;
+
+        // Sort players by turn_order
+        const sorted = [...players].sort(
+          (a, b) => Number(a.turn_order) - Number(b.turn_order)
+        );
+
+        const playerRows = sorted.map(p => {
+          const isWin  = p.win == 1 || p.win === "1" || p.win === "TRUE";
+          const isDraw = p.draw == 1 || p.draw === "1";
+          const elim   = p.eliminated_turn;
+          const bracketLabel = BRACKET_NAMES[String(p.bracket)] || p.bracket;
+
+          let resultHtml = "";
+          if (isWin && isDraw) {
+            resultHtml = `<span style="color:var(--purple)">🤝 Draw</span>`;
+          } else if (isWin) {
+            const wt = p.win_turn !== "" && p.win_turn != null ? ` T${p.win_turn}` : "";
+            resultHtml = `<span style="color:var(--green)">🏆 Won${wt}</span>`;
+          } else if (elim !== "" && elim != null) {
+            resultHtml = `<span style="color:var(--red)">💀 T${elim}</span>`;
+          } else {
+            resultHtml = `<span style="color:var(--muted)">🎮</span>`;
+          }
+
+          return `
+            <div class="history-player-row">
+              <div class="history-player-info">
+                <div class="history-player-name">${escapeHtml(String(p.player_name))}</div>
+                <div class="history-commander-name">
+                  ${escapeHtml(String(p.commander_name))}
+                  <span style="color:var(--border)"> • </span>
+                  <span style="color:var(--muted)">${escapeHtml(bracketLabel)}</span>
+                </div>
+              </div>
+              <div class="history-result">${resultHtml}</div>
+            </div>`;
+        }).join("");
+
+        return `
+          <div class="history-game-card">
+            <div class="history-game-header">
+              <span class="history-match-id">${escapeHtml(String(matchId))}</span>
+              <span class="history-date">${dateStr}</span>
+            </div>
+            ${playerRows}
+          </div>`;
+      }).join("");
+    }
     renderSetupForm(playerCount);
   </script>
 </body>
