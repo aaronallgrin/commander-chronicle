@@ -2469,6 +2469,28 @@
       if (formatFilter.open && !formatFilter.contains(event.target)) formatFilter.open = false;
     });
 
+    function turnNumber(value) {
+      const turn = Number(value);
+      return value !== "" && value != null && Number.isFinite(turn) && turn > 0 ? turn : null;
+    }
+
+    // The turn a game was won on, for the average. Older games often have no win turn, but the
+    // winner won when the last other player went out. Draws and games without a winner don't count.
+    function gameWinTurn(players) {
+      const winner = players.find((p) => (p.win == 1 || p.win === "TRUE") && p.draw != 1);
+      if (!winner || players.some((p) => p.draw == 1)) return null;
+      const recorded = turnNumber(winner.win_turn);
+      if (recorded) return recorded;
+      const outTurns = players.map((p) => turnNumber(p.eliminated_turn)).filter(Boolean);
+      return outTurns.length ? Math.max(...outTurns) : null;
+    }
+
+    // Matches the start of the name or of any word in it, so "drew" finds "Drew Smith" but not "Andrew".
+    function playerNameMatches(name, query) {
+      const lower = String(name || "").toLowerCase().trim();
+      return lower.startsWith(query) || lower.split(/[^\p{L}\p{N}]+/u).some((word) => word.startsWith(query));
+    }
+
     function renderHistoryStats(rows) {
       if (!rows.length) {
         ["histTotalGames", "histTotalPlayers", "histTotalCommanders"].forEach((id) => {
@@ -2489,9 +2511,9 @@
           .filter(Boolean)
       ).size;
 
-      const winTurns = rows
-        .filter((r) => (r.win == 1 || r.win === "1") && r.draw != 1 && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
-        .map((r) => Number(r.win_turn));
+      const winTurns = groupGames(rows)
+        .map(([, players]) => gameWinTurn(players))
+        .filter((turn) => turn != null);
 
       const avgTurns = winTurns.length
         ? Math.round(winTurns.reduce((a, b) => a + b, 0) / winTurns.length)
@@ -2534,9 +2556,7 @@
       }
 
       const filteredRows = filterValue
-        ? rows.filter((r) =>
-            String(r.player_name).toLowerCase().includes(filterValue)
-          )
+        ? rows.filter((r) => playerNameMatches(r.player_name, filterValue))
         : rows;
 
       if (!filteredRows.length) {
@@ -2549,7 +2569,7 @@
         .map(([matchId, players]) => [
           matchId,
           filterValue
-            ? players.filter((r) => String(r.player_name).toLowerCase().includes(filterValue))
+            ? players.filter((r) => playerNameMatches(r.player_name, filterValue))
             : players
         ])
         .filter(([, players]) => players.length)
@@ -2561,16 +2581,16 @@
           ? `${parts[0]}/${parts[1]}/${parts[2]}`
           : matchId;
 
-        const sorted = [...players].sort(
-          (a, b) => Number(a.turn_order) - Number(b.turn_order)
-        );
+        // Older games have no turn order; those players keep their sheet order, after any seated ones.
+        const seat = (p) => turnNumber(p.turn_order) || Infinity;
+        const sorted = [...players].sort((a, b) => (seat(a) - seat(b)) || 0);
         const format = getFormat(players[0].format);
         const setName = format.set ? String(players[0].set_or_theme || "") : "";
         // Games saved before losers were given the final turn left them blank.
         const endTurn = (players.find((p) =>
           (p.win == 1 || p.win === "TRUE") && p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn))
         ) || {}).win_turn;
-        const gameOver = players.some((p) => p.win == 1 || p.win === "TRUE");
+        const gameOver = players.some((p) => p.win == 1 || p.win === "TRUE" || p.draw == 1);
 
         const playerRows = sorted.map((p) => {
           const isWin = p.win == 1 || p.win === "1" || p.win === "TRUE";
@@ -2593,8 +2613,9 @@
           ].filter(Boolean);
 
           let resultHtml = "";
-          if (isWin && isDraw) {
-            // Draws saved before the turn was recorded have "Draw" in win_turn instead of a number.
+          // Some older draws have win = 0, and draws saved before the turn was recorded have "Draw" in
+          // win_turn instead of a number.
+          if (isDraw) {
             const dt = p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn)) ? ` T${p.win_turn}` : "";
             resultHtml = `<span style="color:var(--purple)">Draw${dt}</span>`;
           } else if (isWin) {
