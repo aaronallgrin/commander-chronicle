@@ -276,10 +276,6 @@
       margin-bottom: 16px;
     }
 
-    .turn-stat {
-      grid-column: 1 / -1;
-    }
-
     .stat {
       padding: 16px;
       text-align: center;
@@ -299,35 +295,6 @@
       font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-    }
-
-    .turn-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .turn-row strong {
-      min-width: 2.2rem;
-    }
-
-    .turn-step {
-      width: 40px;
-      height: 40px;
-      min-height: 40px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      color: var(--gold-light);
-      font-size: 1.4rem;
-      line-height: 1;
-      padding: 0;
-    }
-
-    .turn-step:disabled {
-      cursor: not-allowed;
-      opacity: 0.4;
     }
 
     .player-card {
@@ -402,6 +369,21 @@
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin: 18px 0 0;
+    }
+
+    .link-button {
+      display: block;
+      width: auto;
+      min-height: 0;
+      margin: 16px auto 0;
+      padding: 6px 10px;
+      border: 0;
+      background: none;
+      box-shadow: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 400;
+      text-decoration: underline;
     }
 
     #postStatus {
@@ -891,16 +873,6 @@
       margin-bottom: 16px;
     }
 
-    @media (min-width: 480px) {
-      .game-header {
-        grid-template-columns: 1fr 1.15fr 1fr;
-      }
-
-      .turn-stat {
-        grid-column: auto;
-      }
-    }
-
     @media (min-width: 560px) {
       .actions {
         grid-template-columns: 1fr auto;
@@ -1037,14 +1009,6 @@
           <strong id="aliveCount">4</strong>
           <span>Players alive</span>
         </div>
-        <div class="stat turn-stat">
-          <div class="turn-row">
-            <button class="turn-step" type="button" id="prevTurn" aria-label="Previous turn">−</button>
-            <strong id="turnCount">1</strong>
-            <button class="turn-step" type="button" id="nextTurn" aria-label="Next turn">+</button>
-          </div>
-          <span>Turn</span>
-        </div>
         <div class="stat">
           <strong id="matchId">—</strong>
           <span>Match ID</span>
@@ -1054,13 +1018,14 @@
       <div class="panel">
         <h2>Battlefield</h2>
         <p class="history-format" id="gameFormat"></p>
-        <p class="hint">Advance the turn, then eliminate a player to record that turn.</p>
+        <p class="hint">When a player loses, tap Eliminate and enter the turn it happened on.</p>
         <div id="playerCards"></div>
 
         <div class="turn-controls">
           <button class="ghost" type="button" id="declareDrawBtn">Declare Draw</button>
           <button class="ghost" type="button" id="endGameNow">Declare Winner</button>
         </div>
+        <button class="link-button" type="button" id="cancelGame">Cancel game without saving</button>
       </div>
     </section>
 
@@ -1770,17 +1735,52 @@
         startedAt: new Date().toISOString(),
         endedAt: null,
         winner: null,
-        currentTurn: 1,
+        currentTurn: 0,
         format,
         setName,
         players: players.map((player) => ({ ...player, eliminated: false, eliminatedOnTurn: null }))
       };
 
       resetEndScreen();
+      showGameScreen();
+    }
+
+    function showGameScreen() {
       document.getElementById("matchId").textContent = game.match_id;
       document.getElementById("gameFormat").textContent = formatSummary(game.format, game.setName);
       showScreen("gameScreen");
       renderGame();
+    }
+
+    // Phones often reload a page that's been in the background for a while, so the game in progress
+    // (and a finished game that hasn't saved yet) is kept on the device until it's saved.
+    const ACTIVE_GAME_KEY = "commander-active-game";
+
+    function storeActiveGame() {
+      try {
+        if (game && !game.saved) localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(game));
+        else localStorage.removeItem(ACTIVE_GAME_KEY);
+      } catch (error) {
+        console.error("Couldn't keep the game on this device:", error);
+      }
+    }
+
+    function restoreActiveGame() {
+      let stored = null;
+      try {
+        stored = JSON.parse(localStorage.getItem(ACTIVE_GAME_KEY) || "null");
+      } catch (error) {
+        localStorage.removeItem(ACTIVE_GAME_KEY);
+      }
+      if (!stored || !Array.isArray(stored.players)) return;
+
+      game = { ...stored, format: getFormat(stored.format && stored.format.name) };
+      if (game.rows && game.rows.length) {
+        showEndScreen(game.endScreen || {});
+        saveGameRows();
+      } else {
+        showGameScreen();
+      }
     }
 
     function playerDeckText(player) {
@@ -1790,8 +1790,7 @@
     function renderGame() {
       const alive = game.players.filter((player) => !player.eliminated);
       document.getElementById("aliveCount").textContent = alive.length;
-      document.getElementById("turnCount").textContent = game.currentTurn;
-      document.getElementById("prevTurn").disabled = game.currentTurn <= 1;
+      storeActiveGame();
 
       playerCards.innerHTML = game.players.map((player, index) => `
         <article class="player-card ${player.eliminated ? "eliminated" : ""}">
@@ -1831,6 +1830,7 @@
           if (player.eliminated) {
             player.eliminated = false;
             player.eliminatedOnTurn = null;
+            game.currentTurn = lastEliminationTurn() || 0;
             renderGame();
             showToast(`${player.name} is back in the game.`, "success");
           } else {
@@ -1840,24 +1840,20 @@
       });
     }
 
-    document.getElementById("prevTurn").addEventListener("click", () => {
-      if (!game || game.currentTurn <= 1) return;
-      game.currentTurn -= 1;
-      renderGame();
+    document.getElementById("cancelGame").addEventListener("click", () => {
+      if (!game || !confirm("Cancel this game? Nothing will be saved.")) return;
+      game = null;
+      storeActiveGame();
+      showScreen("historyScreen");
     });
 
-    document.getElementById("nextTurn").addEventListener("click", () => {
-      if (!game) return;
-      game.currentTurn += 1;
-      renderGame();
-    });
-
+    // With no turn counter, the latest turn someone was eliminated on is the best guess to offer.
     function showEliminationModal(index) {
       pendingEliminationIndex = index;
       const player = game.players[index];
 
       modalTitle.textContent = `Eliminate ${player.name}?`;
-      eliminationTurn.value = String(game.currentTurn || 1);
+      eliminationTurn.value = game.currentTurn ? String(game.currentTurn) : "";
       modalOverlay.classList.add("visible");
       eliminationTurn.focus();
       eliminationTurn.select();
@@ -1930,7 +1926,7 @@
         </label>
       `).join("");
 
-      document.getElementById("drawTurnInput").value = String(winTurnValue() || game.currentTurn || 1);
+      document.getElementById("drawTurnInput").value = String(winTurnValue());
       drawModalOverlay.classList.add("visible");
     }
 
@@ -1978,12 +1974,12 @@
       game.endedAt = new Date().toISOString();
       game.currentTurn = turn;
 
-      const winnerList = winnerNames.join(", ");
-      document.getElementById("winnerTrophy").textContent = "🤝";
-      document.getElementById("winnerTitle").textContent = "Draw";
-      document.getElementById("winnerName").textContent = `Draw Between ${winnerList}`;
-      document.getElementById("winnerDetails").textContent =
-        `${game.players.filter((p) => !p.eliminated).length} players remained • Turn ${game.currentTurn}`;
+      game.endScreen = {
+        trophy: "🤝",
+        title: "Draw",
+        name: `Draw Between ${winnerNames.join(", ")}`,
+        details: `${game.players.filter((p) => !p.eliminated).length} players remained • Turn ${turn}`
+      };
 
       const rows = game.players.map((player) => {
         const isWinner = winnerNames.includes(player.name);
@@ -2005,8 +2001,9 @@
       });
 
       game.rows = rows;
+      storeActiveGame();
 
-      showScreen("endScreen");
+      showEndScreen(game.endScreen);
       saveGameRows();
     }
 
@@ -2031,7 +2028,7 @@
         </label>
       `).join("");
 
-      winTurnInput.value = String(winTurnValue() || game.currentTurn || 1);
+      winTurnInput.value = String(winTurnValue());
       winnerModalOverlay.classList.add("visible");
     }
 
@@ -2067,20 +2064,20 @@
       game.endedAt = new Date().toISOString();
       game.winner = winner ? winner.name : null;
 
-      document.getElementById("winnerTrophy").textContent = "🏆";
-      document.getElementById("winnerTitle").textContent = "The Victor";
-      document.getElementById("winnerName").textContent =
-        winner ? winner.name : "No winner recorded";
-
-      document.getElementById("winnerDetails").textContent = winner
-        ? [
-            playerDeckText(winner),
-            game.format.deck === "commander" ? BRACKET_NAMES[winner.bracket] || winner.bracket : "",
-            `Turn ${winTurnValue()}`
-          ].filter(Boolean).join(" • ")
-        : "Game ended";
-
       const winTurn = winTurnValue();
+      game.endScreen = {
+        trophy: "🏆",
+        title: "The Victor",
+        name: winner ? winner.name : "No winner recorded",
+        details: winner
+          ? [
+              playerDeckText(winner),
+              game.format.deck === "commander" ? BRACKET_NAMES[winner.bracket] || winner.bracket : "",
+              `Turn ${winTurn}`
+            ].filter(Boolean).join(" • ")
+          : "Game ended"
+      };
+
       const rows = game.players.map((player) => {
         const isWinner = winner && player.name === winner.name;
 
@@ -2101,9 +2098,18 @@
       });
 
       game.rows = rows;
+      storeActiveGame();
 
-      showScreen("endScreen");
+      showEndScreen(game.endScreen);
       saveGameRows();
+    }
+
+    function showEndScreen({ trophy = "🏆", title = "Game Over", name = "", details = "" }) {
+      document.getElementById("winnerTrophy").textContent = trophy;
+      document.getElementById("winnerTitle").textContent = title;
+      document.getElementById("winnerName").textContent = name;
+      document.getElementById("winnerDetails").textContent = details;
+      showScreen("endScreen");
     }
 
     function setSaveStatus(message, color) {
@@ -2164,6 +2170,7 @@
         if (!result.already_saved) cachedHistoryRows = [...cachedHistoryRows, ...savingGame.rows];
 
         savingGame.saved = true;
+        if (isCurrent() || !game) storeActiveGame();
         if (isCurrent()) setSaveStatus(`Game saved as ${savingGame.match_id}.`, "var(--green)");
         showToast("Game saved successfully.", "success");
         return true;
@@ -2480,6 +2487,7 @@
     renderFormatField();
     renderSetupForm(playerCount);
     loadHistory();
+    restoreActiveGame();
   </script>
 </body>
 </html>
