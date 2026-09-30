@@ -1,0 +1,14 @@
+{
+  "name": "commander-chronicle",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 43123",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 43123"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
