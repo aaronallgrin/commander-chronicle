@@ -479,6 +479,47 @@
       font-size: 0.8rem;
     }
 
+    .commander-link {
+      padding: 0;
+      background: none;
+      color: inherit;
+      font-size: inherit;
+      text-align: left;
+      text-decoration: underline dotted rgba(156, 164, 183, 0.6);
+      text-underline-offset: 3px;
+    }
+
+    .commander-link:hover { color: var(--gold-light); }
+
+    .card-preview {
+      position: fixed;
+      z-index: 300;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.78);
+      animation: fadeIn 120ms ease-out;
+      cursor: pointer;
+    }
+
+    .card-preview img {
+      width: min(78vw, 320px);
+      aspect-ratio: 488 / 680;
+      border-radius: 4.75% / 3.5%;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .card-preview p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
     .modal-overlay {
       display: none;
       position: fixed;
@@ -920,6 +961,11 @@
         <button class="primary" type="button" id="winnerConfirm">Confirm Winner</button>
       </div>
     </div>
+  </div>
+
+  <div id="cardPreview" class="card-preview" role="dialog" aria-modal="true" aria-label="Commander card" hidden>
+    <img id="cardPreviewImage" alt="" />
+    <p id="cardPreviewStatus"></p>
   </div>
 
   <main class="app">
@@ -2215,6 +2261,45 @@
       return games;
     }
 
+    const cardPreview = document.getElementById("cardPreview");
+    const cardPreviewImage = document.getElementById("cardPreviewImage");
+    const cardPreviewStatus = document.getElementById("cardPreviewStatus");
+
+    function showCardPreview(name) {
+      cardPreview.hidden = false;
+      cardPreviewImage.alt = name;
+      cardPreviewStatus.textContent = "Loading card...";
+      cardPreviewImage.dataset.card = name;
+      cardPreviewImage.hidden = false;
+      cardPreviewImage.src =
+        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}&format=image&version=normal`;
+    }
+
+    function hideCardPreview() {
+      cardPreview.hidden = true;
+      cardPreviewImage.removeAttribute("src");
+    }
+
+    cardPreviewImage.addEventListener("load", () => {
+      cardPreviewStatus.textContent = "Tap anywhere to close";
+    });
+
+    cardPreviewImage.addEventListener("error", () => {
+      if (!cardPreviewImage.getAttribute("src")) return;
+      cardPreviewImage.hidden = true;
+      cardPreviewStatus.textContent = `Couldn't load a Scryfall image for ${cardPreviewImage.dataset.card}.`;
+    });
+
+    cardPreview.addEventListener("click", hideCardPreview);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !cardPreview.hidden) hideCardPreview();
+    });
+
+    document.getElementById("historyList").addEventListener("click", (event) => {
+      const link = event.target.closest(".commander-link");
+      if (link) showCardPreview(link.dataset.card);
+    });
+
     // Past Games only lists Commander games for now. Set to false to show every format again (each
     // card then gets a format tag). Game numbering always uses the full history.
     const HISTORY_COMMANDER_ONLY = true;
@@ -2318,10 +2403,13 @@
           const bracketLabel = format.deck === "commander"
             ? BRACKET_NAMES[String(p.bracket)] || p.bracket
             : "";
-          const deckText = escapeHtml(String(deckLabel(format, {
+          const deckName = escapeHtml(String(deckLabel(format, {
             commander: p.commander_name,
             set_or_theme: p.set_or_theme
           })));
+          const deckText = format.deck === "commander" && deckName
+            ? `<button class="commander-link" type="button" data-card="${deckName}">${deckName}</button>`
+            : deckName;
           const deckParts = [
             deckText,
             deckPipsHtml(format, p.color_identity),
