@@ -578,7 +578,12 @@
       .bracket-selector { grid-template-columns: repeat(6, 1fr); }
     }
 
-    .bracket-btn {
+    .order-selector {
+      display: grid;
+      gap: 8px;
+    }
+
+    .choice-btn {
       min-height: 44px;
       padding: 10px 6px;
       border: 2px solid var(--border);
@@ -589,15 +594,20 @@
       transition: all 120ms ease;
     }
 
-    .bracket-btn:hover {
+    .choice-btn:hover:not(:disabled) {
       border-color: var(--gold);
       color: var(--gold-light);
     }
 
-    .bracket-btn.selected {
+    .choice-btn.selected {
       border-color: var(--gold);
       background: rgba(215, 169, 75, 0.15);
       color: var(--gold-light);
+    }
+
+    .choice-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
     }
 
     .draw-player-option {
@@ -1047,12 +1057,23 @@
       };
     }
 
-    function makeOptions(start, end, placeholder) {
-      let html = `<option value="">${placeholder}</option>`;
-      for (let i = start; i <= end; i++) {
-        html += `<option value="${i}">${i}</option>`;
+    // A seat already taken by another player is disabled; tapping your own seat again frees it.
+    function refreshOrderButtons() {
+      const taken = new Map();
+      for (let i = 0; i < playerCount; i++) {
+        const value = document.getElementById(`order-${i}`).value;
+        if (value) taken.set(value, i);
       }
-      return html;
+
+      for (let i = 0; i < playerCount; i++) {
+        document.querySelectorAll(`#order-label-${i} ~ .order-selector .order-btn`).forEach((btn) => {
+          const owner = taken.get(btn.dataset.order);
+          const isSelected = owner === i;
+          btn.classList.toggle("selected", isSelected);
+          btn.setAttribute("aria-pressed", String(isSelected));
+          btn.disabled = owner !== undefined && !isSelected;
+        });
+      }
     }
 
     function showToast(message, type) {
@@ -1158,18 +1179,22 @@
           </div>
 
           <div class="field">
-            <label for="order-${i}">Turn order</label>
-            <select id="order-${i}" name="order-${i}" required>
-              ${makeOptions(1, count, "Choose")}
-            </select>
-          </div>
-
-          <div class="field">
             <label id="bracket-label-${i}">Bracket</label>
             <input id="bracket-${i}" name="bracket-${i}" type="hidden" />
             <div class="bracket-selector" role="group" aria-labelledby="bracket-label-${i}">
               ${BRACKET_OPTIONS.map(([value, label]) => `
-                <button class="bracket-btn" type="button" data-bracket="${value}" aria-pressed="false">${label}</button>
+                <button class="choice-btn bracket-btn" type="button" data-bracket="${value}" aria-pressed="false">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="field">
+            <label id="order-label-${i}">Turn order</label>
+            <input id="order-${i}" name="order-${i}" type="hidden" />
+            <div class="order-selector" role="group" aria-labelledby="order-label-${i}"
+              style="grid-template-columns: repeat(${count}, 1fr);">
+              ${Array.from({ length: count }, (_, n) => `
+                <button class="choice-btn order-btn" type="button" data-order="${n + 1}" aria-pressed="false">${n + 1}</button>
               `).join("")}
             </div>
           </div>
@@ -1193,6 +1218,14 @@
               b.classList.toggle("selected", isSelected);
               b.setAttribute("aria-pressed", String(isSelected));
             });
+          });
+        });
+
+        const orderInput = fieldset.querySelector(`#order-${i}`);
+        fieldset.querySelectorAll(".order-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            orderInput.value = orderInput.value === btn.dataset.order ? "" : btn.dataset.order;
+            refreshOrderButtons();
           });
         });
 
