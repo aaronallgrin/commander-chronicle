@@ -1987,7 +1987,6 @@
 
       const rows = game.players.map((player) => {
         const isWinner = winnerNames.includes(player.name);
-        const isLoser = !isWinner && player.eliminated;
 
         return {
           match_id: game.match_id,
@@ -1998,7 +1997,7 @@
           color_identity: player.color_identity || "",
           bracket: player.bracket,
           turn_order: player.seat,
-          eliminated_turn: isLoser ? player.eliminatedOnTurn : "",
+          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || turn),
           win: isWinner ? 1 : 0,
           win_turn: isWinner ? turn : "",
           draw: isWinner ? 1 : 0
@@ -2081,6 +2080,7 @@
           ].filter(Boolean).join(" • ")
         : "Game ended";
 
+      const winTurn = winTurnValue();
       const rows = game.players.map((player) => {
         const isWinner = winner && player.name === winner.name;
 
@@ -2093,9 +2093,9 @@
           color_identity: player.color_identity || "",
           bracket: player.bracket,
           turn_order: player.seat,
-          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || ""),
+          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || (winner ? winTurn : "")),
           win: isWinner ? 1 : 0,
-          win_turn: isWinner ? winTurnValue() : "",
+          win_turn: isWinner ? winTurn : "",
           draw: 0
         };
       });
@@ -2407,11 +2407,16 @@
         );
         const format = getFormat(players[0].format);
         const setName = format.set ? String(players[0].set_or_theme || "") : "";
+        // Games saved before losers were given the final turn left them blank.
+        const endTurn = (players.find((p) =>
+          (p.win == 1 || p.win === "TRUE") && p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn))
+        ) || {}).win_turn;
+        const gameOver = players.some((p) => p.win == 1 || p.win === "TRUE");
 
         const playerRows = sorted.map((p) => {
           const isWin = p.win == 1 || p.win === "1" || p.win === "TRUE";
           const isDraw = p.draw == 1 || p.draw === "1";
-          const elim = p.eliminated_turn;
+          const elim = p.eliminated_turn !== "" && p.eliminated_turn != null ? p.eliminated_turn : endTurn;
           const bracketLabel = format.deck === "commander"
             ? BRACKET_NAMES[String(p.bracket)] || p.bracket
             : "";
@@ -2438,6 +2443,8 @@
             resultHtml = `<span style="color:var(--green)">Won${wt}</span>`;
           } else if (elim !== "" && elim != null) {
             resultHtml = `<span style="color:var(--red)">Out T${elim}</span>`;
+          } else if (gameOver) {
+            resultHtml = `<span style="color:var(--red)">Out</span>`;
           } else {
             resultHtml = `<span style="color:var(--muted)">Playing</span>`;
           }

@@ -61,6 +61,7 @@ Each row looks like:
 - `format` is the format name. Rows saved before formats existed have no value here and are shown as Commander.
 - `commander_name` and `bracket` are only filled in for Commander.
 - For a draw, the tied players have `win` = 1, `draw` = 1, and `win_turn` = the turn the draw happened on (draws saved before this was recorded have `Draw` there instead). Draws aren't counted in the average win turn.
+- When a game ends by declaring a winner or a draw, every other player who hadn't already been eliminated gets `eliminated_turn` = the final turn. Past Games also shows them as out on that turn for games saved before this.
 - `set_or_theme` is the deck theme (Constructed), `Forgetful Fish` (Dandân), or the set or cube name (Limited).
 
 ## Google Apps Script
