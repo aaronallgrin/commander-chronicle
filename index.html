@@ -1182,10 +1182,18 @@
       return `${year}_${month}_${day}`;
     }
 
+    // Games can be recorded from several devices, so today's count comes from the sheet's history as
+    // well as this device's own counter (which covers games whose save hasn't shown up in history yet).
     function createDailyGameId() {
       const dateKey = getLocalDateString();
       const storageKey = `commander-game-count-${dateKey}`;
-      const previousCount = Number(localStorage.getItem(storageKey) || 0);
+      const prefix = `${dateKey}_`;
+      const savedNumbers = cachedHistoryRows
+        .map((row) => String(row.match_id || ""))
+        .filter((id) => id.startsWith(prefix))
+        .map((id) => Number(id.slice(prefix.length)))
+        .filter((n) => Number.isInteger(n));
+      const previousCount = Math.max(Number(localStorage.getItem(storageKey) || 0), 0, ...savedNumbers);
       const gameNumber = previousCount + 1;
 
       localStorage.setItem(storageKey, String(gameNumber));
@@ -2107,6 +2115,7 @@
       game = null;
       resetSetupForm();
       showScreen("setupScreen");
+      loadHistory({ quiet: true });
     });
 
     document.getElementById("resetForm").addEventListener("click", () => {
@@ -2122,6 +2131,7 @@
     document.getElementById("startNewGame").addEventListener("click", () => {
       resetSetupForm();
       showScreen("setupScreen");
+      loadHistory({ quiet: true });
     });
 
     document.getElementById("cancelSetup").addEventListener("click", () => {
@@ -2136,13 +2146,16 @@
       renderHistoryList(cachedHistoryRows);
     });
 
-    async function loadHistory() {
+    // quiet: refresh in the background (used for game numbering) without clearing the list or
+    // showing an error if the sheet can't be reached.
+    async function loadHistory({ quiet = false } = {}) {
       const historyList = document.getElementById("historyList");
-      historyList.innerHTML = `<div class="history-loading">Loading games...</div>`;
-
-      ["histTotalGames", "histTotalPlayers", "histTotalCommanders", "histAvgTurns"].forEach((id) => {
-        document.getElementById(id).textContent = "—";
-      });
+      if (!quiet) {
+        historyList.innerHTML = `<div class="history-loading">Loading games...</div>`;
+        ["histTotalGames", "histTotalPlayers", "histTotalCommanders", "histAvgTurns"].forEach((id) => {
+          document.getElementById(id).textContent = "—";
+        });
+      }
 
       try {
         const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=history`);
@@ -2159,6 +2172,7 @@
         renderHistoryList(cachedHistoryRows);
       } catch (error) {
         console.error("History load failed:", error);
+        if (quiet) return;
         historyList.innerHTML = `
           <div class="history-empty">
             Could not load games.<br/>
@@ -2168,10 +2182,25 @@
       }
     }
 
+    // Each game's rows are saved together, so a game is a run of consecutive rows sharing a match ID.
+    // This keeps two games apart even if they were given the same ID on different devices.
+    function groupGames(rows) {
+      const games = [];
+      rows.forEach((row) => {
+        const last = games[games.length - 1];
+        if (last && last[0] === row.match_id) {
+          last[1].push(row);
+        } else {
+          games.push([row.match_id, [row]]);
+        }
+      });
+      return games;
+    }
+
     function renderHistoryStats(rows) {
       if (!rows.length) return;
 
-      const uniqueGames = new Set(rows.map((r) => r.match_id)).size;
+      const uniqueGames = groupGames(rows).length;
       const uniquePlayers = new Set(
         rows.map((r) => String(r.player_name).toLowerCase().trim())
       ).size;
@@ -2232,14 +2261,15 @@
         return;
       }
 
-      const gamesMap = new Map();
-      filteredRows.forEach((row) => {
-        const id = row.match_id;
-        if (!gamesMap.has(id)) gamesMap.set(id, []);
-        gamesMap.get(id).push(row);
-      });
-
-      const gameEntries = Array.from(gamesMap.entries()).reverse();
+      const gameEntries = groupGames(rows)
+        .map(([matchId, players]) => [
+          matchId,
+          filterValue
+            ? players.filter((r) => String(r.player_name).toLowerCase().includes(filterValue))
+            : players
+        ])
+        .filter(([, players]) => players.length)
+        .reverse();
 
       historyList.innerHTML = gameEntries.map(([matchId, players]) => {
         const parts = String(matchId).split("_");
