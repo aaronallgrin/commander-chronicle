@@ -2485,6 +2485,12 @@
       return outTurns.length ? Math.max(...outTurns) : null;
     }
 
+    // Matches the start of the name or of any word in it, so "drew" finds "Drew Smith" but not "Andrew".
+    function playerNameMatches(name, query) {
+      const lower = String(name || "").toLowerCase().trim();
+      return lower.startsWith(query) || lower.split(/[^\p{L}\p{N}]+/u).some((word) => word.startsWith(query));
+    }
+
     function renderHistoryStats(rows) {
       if (!rows.length) {
         ["histTotalGames", "histTotalPlayers", "histTotalCommanders"].forEach((id) => {
@@ -2550,9 +2556,7 @@
       }
 
       const filteredRows = filterValue
-        ? rows.filter((r) =>
-            String(r.player_name).toLowerCase().includes(filterValue)
-          )
+        ? rows.filter((r) => playerNameMatches(r.player_name, filterValue))
         : rows;
 
       if (!filteredRows.length) {
@@ -2565,7 +2569,7 @@
         .map(([matchId, players]) => [
           matchId,
           filterValue
-            ? players.filter((r) => String(r.player_name).toLowerCase().includes(filterValue))
+            ? players.filter((r) => playerNameMatches(r.player_name, filterValue))
             : players
         ])
         .filter(([, players]) => players.length)

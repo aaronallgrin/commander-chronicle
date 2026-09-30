@@ -30,6 +30,8 @@ npm run preview
 
 Past Games shows only Commander games by default. The **Formats** dropdown at the top has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
 
+The player filter matches the start of a name or of any word in it, so "drew" finds Drew but not Andrew.
+
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
 ### Formats
