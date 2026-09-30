@@ -1119,8 +1119,11 @@
       return FORMATS.find((f) => f.name === name) || FORMATS[0];
     }
 
-    function formatTracksColors(format) {
-      return format.deck === "commander" || format.deck === "fixed" || Boolean(format.colors);
+    // Commander and fixed-deck colors are always known, so none means colorless. Colors players pick
+    // themselves are optional, so none means "not recorded" and shows nothing.
+    function deckPipsHtml(format, colorIdentity) {
+      if (format.deck === "commander" || format.deck === "fixed") return manaPipsHtml(colorIdentity);
+      return format.colors && colorIdentity ? manaPipsHtml(colorIdentity) : "";
     }
 
     // What to show for a player's deck: commander name, deck theme, fixed deck, or nothing for Limited.
@@ -1401,6 +1404,7 @@
 
       playerForms.innerHTML = "";
       suggestionTimers = [];
+      setupError.classList.remove("visible");
       const orderColumns = count <= 4 ? count : Math.ceil(count / 2);
 
       for (let i = 0; i < count; i++) {
@@ -1706,9 +1710,10 @@
         <article class="player-card ${player.eliminated ? "eliminated" : ""}">
           <div>
             <div class="player-name">${escapeHtml(player.name)}</div>
-            <div class="commander">${escapeHtml(playerDeckText(player))}${
-              formatTracksColors(game.format) ? `&ensp;${manaPipsHtml(player.color_identity)}` : ""
-            }</div>
+            <div class="commander">${[
+              escapeHtml(playerDeckText(player)),
+              deckPipsHtml(game.format, player.color_identity)
+            ].filter(Boolean).join("&ensp;")}</div>
             <span class="badge">Seat ${player.seat}</span>
             ${
               game.format.deck === "commander"
@@ -2243,7 +2248,7 @@
           })));
           const deckParts = [
             deckText,
-            formatTracksColors(format) ? manaPipsHtml(p.color_identity) : "",
+            deckPipsHtml(format, p.color_identity),
             bracketLabel ? `<span class="history-bracket">(${escapeHtml(String(bracketLabel))})</span>` : ""
           ].filter(Boolean);
 
