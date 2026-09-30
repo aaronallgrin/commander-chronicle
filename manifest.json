@@ -1,0 +1,22 @@
+{
+  "name": "Commander Chronicle",
+  "short_name": "Commander",
+  "description": "Track your MTG Commander games",
+  "start_url": "/commander-chronicle/",
+  "display": "standalone",
+  "background_color": "#0b0d12",
+  "theme_color": "#d7a94b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
