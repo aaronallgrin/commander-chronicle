@@ -2161,7 +2161,7 @@
     });
 
     document.getElementById("historyPlayerFilter").addEventListener("input", () => {
-      renderHistoryList(cachedHistoryRows);
+      renderHistoryList(visibleHistoryRows());
     });
 
     // quiet: refresh in the background (used for game numbering) without clearing the list or
@@ -2186,8 +2186,8 @@
 
         cachedHistoryRows = data.rows || [];
 
-        renderHistoryStats(cachedHistoryRows);
-        renderHistoryList(cachedHistoryRows);
+        renderHistoryStats(visibleHistoryRows());
+        renderHistoryList(visibleHistoryRows());
       } catch (error) {
         console.error("History load failed:", error);
         if (quiet) return;
@@ -2213,6 +2213,16 @@
         }
       });
       return games;
+    }
+
+    // Past Games only lists Commander games for now. Set to false to show every format again (each
+    // card then gets a format tag). Game numbering always uses the full history.
+    const HISTORY_COMMANDER_ONLY = true;
+
+    function visibleHistoryRows() {
+      return HISTORY_COMMANDER_ONLY
+        ? cachedHistoryRows.filter((row) => getFormat(row.format).deck === "commander")
+        : cachedHistoryRows;
     }
 
     function renderHistoryStats(rows) {
@@ -2346,7 +2356,9 @@
           <div class="history-game-card">
             <div class="history-game-header">
               <div class="history-game-title">
-                <span class="history-format-tag">${escapeHtml(formatSummary(format, setName))}</span>
+                ${HISTORY_COMMANDER_ONLY
+                  ? ""
+                  : `<span class="history-format-tag">${escapeHtml(formatSummary(format, setName))}</span>`}
                 <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
               </div>
               <span class="history-date">${escapeHtml(String(dateStr))}</span>
