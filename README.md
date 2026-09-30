@@ -24,7 +24,7 @@ npm run preview
 
 1. Choose 2–8 players. Games with 3 or more players are always Commander: enter each name, search and select a commander, choose a bracket, and pick a unique seat.
 2. With 2 players, Commander is still the default, but **Format** lets you pick another (see below).
-3. On the battlefield, advance the turn counter and mark players eliminated (the current turn is suggested).
+3. On the battlefield, tap **Eliminate** when a player loses and enter the turn it happened on (after the first one, the latest turn entered is suggested). There's no turn counter to keep up to date. The game in progress is kept on the device, so it survives the phone reloading the page after being locked or switching apps. **Cancel game without saving** throws it away.
 4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
 5. The game is saved automatically (one row per player) and the end screen shows whether it worked, with a retry button if it didn't. From there, **Play Again** starts a new game with the same players, decks and seats, **New Game** opens a fresh setup, and **Back to Past Games** returns home.
 
