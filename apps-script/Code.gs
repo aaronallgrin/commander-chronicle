@@ -14,7 +14,9 @@ const SHEET_NAME = "Games";
 const COLUMNS = [
   "match_id",
   "player_name",
+  "format",
   "commander_name",
+  "set_or_theme",
   "color_identity",
   "bracket",
   "turn_order",
@@ -47,6 +49,16 @@ function getHeaders_(sheet) {
     .map(normalizeHeader_);
 }
 
+// Sheets created before a column existed get it added to the end of row 1, so saves don't drop it.
+function ensureColumns_(sheet) {
+  const headers = getHeaders_(sheet);
+  const missing = COLUMNS.filter((column) => headers.indexOf(column) === -1);
+
+  if (missing.length) {
+    sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+  }
+}
+
 function json_(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
@@ -64,6 +76,7 @@ function doPost(e) {
     }
 
     const sheet = getSheet_();
+    ensureColumns_(sheet);
     const headers = getHeaders_(sheet);
     const values = rows.map((row) =>
       headers.map((key) => (row[key] === undefined || row[key] === null ? "" : row[key]))
