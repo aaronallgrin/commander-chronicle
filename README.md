@@ -34,7 +34,7 @@ Past Games shows only Commander games by default. The **Formats** dropdown at th
 
 | Format | Group | What's recorded per player |
 | --- | --- | --- |
-| Commander (default) | | Commander (Scryfall search, colors from its color identity), bracket |
+| Commander (default) | | Commander (Scryfall search limited to `is:commander legal:commander`, colors from its color identity), bracket |
 | Standard, Pioneer, Modern, Legacy, Vintage, Pauper | Constructed | Deck theme, deck colors |
 | Dandân | Constructed | Nothing extra: both players share the mono-blue "Forgetful Fish" deck |
 | Pai Gow | Limited | Set name (shared by the game) |

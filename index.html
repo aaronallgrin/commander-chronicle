@@ -1647,15 +1647,26 @@
         !document.body.contains(commanderInput) || commanderInput.value.trim() !== query;
 
       try {
+        // Only cards that can be a commander and are legal in Commander. Scryfall answers 404 when
+        // nothing matches.
+        const search = `is:commander legal:commander name:"${query.replace(/"/g, "")}"`;
         const response = await fetch(
-          `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`
+          `https://api.scryfall.com/cards/search?order=edhrec&q=${encodeURIComponent(search)}`
         );
 
-        if (!response.ok) throw new Error("Scryfall request failed");
+        if (!response.ok && response.status !== 404) throw new Error("Scryfall request failed");
 
-        const data = await response.json();
+        const data = response.ok ? await response.json() : { data: [] };
         if (isStale()) return;
-        const names = (data.data || []).slice(0, 8);
+        const lowerQuery = query.toLowerCase();
+        const startsWithQuery = (card) => card.name.toLowerCase().startsWith(lowerQuery) ? 0 : 1;
+        const cards = (data.data || [])
+          .map((card, order) => ({ card, order }))
+          .sort((a, b) => startsWithQuery(a.card) - startsWithQuery(b.card) || a.order - b.order)
+          .slice(0, 8)
+          .map(({ card }) => card);
+        const identities = new Map(cards.map((card) => [card.name, card.color_identity]));
+        const names = cards.map((card) => card.name);
 
         suggestions.innerHTML = names.length
           ? names.map((name) => `
@@ -1663,45 +1674,26 @@
                 ${escapeHtml(name)}
               </button>
             `).join("")
-          : `<div class="suggestion">No cards found</div>`;
+          : `<div class="suggestion">No Commander-legal commanders found</div>`;
 
         suggestions.classList.add("visible");
 
         suggestions.querySelectorAll("button[data-name]").forEach((button) => {
-          button.addEventListener("click", async () => {
+          button.addEventListener("click", () => {
             const name = button.dataset.name;
             const commanderIdInput = document.getElementById(`commander-id-${index}`);
             const colorIdentityInput = document.getElementById(`color-identity-${index}`);
             const selectedCard = document.getElementById(`selected-${index}`);
 
+            const colors = identities.get(name);
+            const identity = Array.isArray(colors) ? colors.join(",") : "";
+
             commanderInput.value = name;
             commanderIdInput.value = name;
-            selectedCard.textContent = `Loading card details: ${name}...`;
+            colorIdentityInput.value = identity;
+            selectedCard.textContent = `Selected: ${name}` + (identity ? ` • ${identity}` : " • Colorless");
             selectedCard.classList.add("visible");
             suggestions.classList.remove("visible");
-
-            try {
-              const cardResponse = await fetch(
-                `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`
-              );
-
-              if (!cardResponse.ok) throw new Error("Unable to load card details");
-
-              const card = await cardResponse.json();
-              if (commanderInput.value !== name) return;
-              const identity = Array.isArray(card.color_identity)
-                ? card.color_identity.join(",")
-                : "";
-
-              colorIdentityInput.value = identity;
-              selectedCard.textContent =
-                `Selected: ${name}` +
-                (identity ? ` • ${identity}` : " • Colorless");
-            } catch (error) {
-              if (commanderInput.value !== name) return;
-              colorIdentityInput.value = "";
-              selectedCard.textContent = `Selected: ${name} • Color identity unavailable`;
-            }
           });
         });
       } catch (error) {
