@@ -1,6 +1,6 @@
 # Commander Chronicle
 
-A mobile-first Magic: The Gathering game tracker, built around Commander. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, then copy or POST the game as JSON to a Google Apps Script web app. Two-player games can also be recorded in other formats.
+A mobile-first Magic: The Gathering game tracker, built around Commander. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, and the game is saved to a Google Sheet through a Google Apps Script web app. Two-player games can also be recorded in other formats.
 
 Live site: [https://aaronallgrin.github.io/commander-chronicle/](https://aaronallgrin.github.io/commander-chronicle/)
 
@@ -26,7 +26,7 @@ npm run preview
 2. With 2 players, Commander is still the default, but **Format** lets you pick another (see below).
 3. On the battlefield, advance the turn counter and mark players eliminated (the current turn is suggested).
 4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
-5. The end screen shows a JSON array of one row per player, ready to POST.
+5. The game is saved automatically (one row per player) and the end screen shows whether it worked, with a retry button if it didn't. From there, **Play Again** starts a new game with the same players, decks and seats, **New Game** opens a fresh setup, and **Back to Past Games** returns home.
 
 ### Formats
 
@@ -60,17 +60,21 @@ Each row looks like:
 
 - `format` is the format name. Rows saved before formats existed have no value here and are shown as Commander.
 - `commander_name` and `bracket` are only filled in for Commander.
+- For a draw, the tied players have `win` = 1, `draw` = 1, and `win_turn` = the turn the draw happened on (draws saved before this was recorded have `Draw` there instead). Draws aren't counted in the average win turn.
+- When a game ends by declaring a winner or a draw, every other player who hadn't already been eliminated gets `eliminated_turn` = the final turn. Past Games also shows them as out on that turn for games saved before this.
 - `set_or_theme` is the deck theme (Constructed), `Forgetful Fish` (Dandân), or the set or cube name (Limited).
 
 ## Google Apps Script
 
 The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint.
 
-Replace that constant if you deploy your own script. The app still works without a live endpoint: you can copy the JSON from the end screen.
+Replace that constant if you deploy your own script.
 
 ### Setting up the script
 
 The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
+
+Match IDs are the date followed by that day's game number (`2026_09_30_01`, `2026_09_30_02`, ...) and are never reused. The app suggests the next number from the sheet's history, but `doPost` has the final say: if the suggested ID is already taken (for example by a game just recorded on another device), it saves the game under the next free number and the app shows that ID. Sending the same game twice only saves it once. Any duplicate IDs already in the sheet are renumbered automatically on the next save or history load, or you can run `fixDuplicateGameIds` from the Apps Script editor.
 
 1. Open your Google Sheet and go to **Extensions > Apps Script**.
 2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 holds the column headers (`match_id`, `player_name`, ... `draw`). An empty sheet gets them automatically, and any missing column (such as `format` or `set_or_theme` on an older sheet) is added to the end of row 1 the next time a game is saved.

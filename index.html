@@ -404,17 +404,14 @@
       margin: 18px 0 0;
     }
 
-    .json-output {
+    #postStatus {
+      margin: 0 0 4px;
+      text-align: center;
+    }
+
+    .retry-save {
       width: 100%;
-      min-height: 220px;
-      resize: vertical;
-      color: #d9e3d1;
-      background: #090c11;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.78rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+      margin-top: 12px;
     }
 
     .winner {
@@ -482,6 +479,47 @@
       font-size: 0.8rem;
     }
 
+    .commander-link {
+      padding: 0;
+      background: none;
+      color: inherit;
+      font-size: inherit;
+      text-align: left;
+      text-decoration: underline dotted rgba(156, 164, 183, 0.6);
+      text-underline-offset: 3px;
+    }
+
+    .commander-link:hover { color: var(--gold-light); }
+
+    .card-preview {
+      position: fixed;
+      z-index: 300;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.78);
+      animation: fadeIn 120ms ease-out;
+      cursor: pointer;
+    }
+
+    .card-preview img {
+      width: min(78vw, 320px);
+      aspect-ratio: 488 / 680;
+      border-radius: 4.75% / 3.5%;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .card-preview p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
     .modal-overlay {
       display: none;
       position: fixed;
@@ -545,7 +583,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 6px;
-      margin: 16px 0;
+      margin-top: 10px;
     }
 
     .player-count-btn {
@@ -709,10 +747,27 @@
       box-shadow: var(--shadow);
     }
 
+    .history-game-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      min-width: 0;
+    }
+
+    .history-format-tag {
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 0.75rem;
+    }
+
     .history-game-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       margin-bottom: 10px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--border);
@@ -733,6 +788,7 @@
       color: var(--muted);
       font-size: 0.78rem;
       letter-spacing: 0.04em;
+      white-space: nowrap;
     }
 
     .history-player-row {
@@ -882,6 +938,10 @@
         Select all players who tied for the victory.
       </p>
       <div id="drawPlayerList"></div>
+      <div class="field">
+        <label for="drawTurnInput">Turn the draw happened on</label>
+        <input id="drawTurnInput" type="number" min="1" max="999" inputmode="numeric" placeholder="Enter turn number" />
+      </div>
       <div class="modal-actions">
         <button class="ghost" type="button" id="drawCancel">Cancel</button>
         <button class="primary" type="button" id="drawConfirm">Confirm Draw</button>
@@ -907,6 +967,11 @@
     </div>
   </div>
 
+  <div id="cardPreview" class="card-preview" role="dialog" aria-modal="true" aria-label="Commander card" hidden>
+    <img id="cardPreviewImage" alt="" />
+    <p id="cardPreviewStatus"></p>
+  </div>
+
   <main class="app">
     <header class="brand">
       <div class="brand-mark">✦ ◈ ✦</div>
@@ -919,15 +984,14 @@
     <section id="setupScreen" class="screen">
       <div class="panel">
         <h2>Prepare the Table</h2>
-        <p class="hint">
-          Choose the number of players to get started. Games with 3 or more players are Commander;
-          with 2 players you can pick another format.
-        </p>
 
         <form id="setupForm" novalidate>
           <div class="field">
-            <label>How many players?</label>
-            <div class="player-count-selector">
+            <label id="players-label">Players</label>
+            <button class="choice-btn format-toggle" type="button" id="playersToggle" aria-expanded="false">
+              <span id="playersToggleLabel">4-player Commander</span> <span class="format-toggle-hint">Other</span>
+            </button>
+            <div class="player-count-selector" id="playerCountOptions" hidden>
               <button class="player-count-btn" type="button" data-count="2">2</button>
               <button class="player-count-btn" type="button" data-count="3">3</button>
               <button class="player-count-btn selected" type="button" data-count="4">4</button>
@@ -1052,19 +1116,14 @@
       </div>
 
       <div class="panel">
-        <h2>Game JSON</h2>
-        <p class="hint">
-          This object is ready to POST to a Google Apps Script web app endpoint.
-        </p>
-        <textarea id="jsonOutput" class="json-output" readonly></textarea>
+        <p id="postStatus" class="error" role="status"></p>
+        <button class="secondary retry-save" type="button" id="retrySave" hidden>Try Saving Again</button>
 
         <div class="actions">
-          <button class="primary" type="button" id="copyJson">Copy JSON</button>
-          <button class="secondary" type="button" id="postJson">POST to Apps Script</button>
+          <button class="primary" type="button" id="playAgain">Play Again</button>
+          <button class="ghost" type="button" id="endNewGame">New Game</button>
           <button class="ghost" type="button" id="newGame">Back to Past Games</button>
         </div>
-
-        <p id="postStatus" class="error" role="status"></p>
       </div>
     </section>
   </main>
@@ -1076,7 +1135,6 @@
     const setupForm = document.getElementById("setupForm");
     const setupError = document.getElementById("setupError");
     const playerCards = document.getElementById("playerCards");
-    const jsonOutput = document.getElementById("jsonOutput");
     const modalOverlay = document.getElementById("modalOverlay");
     const modalTitle = document.getElementById("modalTitle");
     const eliminationTurn = document.getElementById("eliminationTurn");
@@ -1174,10 +1232,18 @@
       return `${year}_${month}_${day}`;
     }
 
+    // Games can be recorded from several devices, so today's count comes from the sheet's history as
+    // well as this device's own counter (which covers games whose save hasn't shown up in history yet).
     function createDailyGameId() {
       const dateKey = getLocalDateString();
       const storageKey = `commander-game-count-${dateKey}`;
-      const previousCount = Number(localStorage.getItem(storageKey) || 0);
+      const prefix = `${dateKey}_`;
+      const savedNumbers = cachedHistoryRows
+        .map((row) => String(row.match_id || ""))
+        .filter((id) => id.startsWith(prefix))
+        .map((id) => Number(id.slice(prefix.length)))
+        .filter((n) => Number.isInteger(n));
+      const previousCount = Math.max(Number(localStorage.getItem(storageKey) || 0), 0, ...savedNumbers);
       const gameNumber = previousCount + 1;
 
       localStorage.setItem(storageKey, String(gameNumber));
@@ -1246,6 +1312,7 @@
       currentFormat = FORMATS[0];
       submitBtn.disabled = false;
       setupError.classList.remove("visible");
+      renderPlayersToggle(false);
       renderFormatField();
       renderSetupForm(playerCount);
     }
@@ -1263,9 +1330,21 @@
         playerCount = count;
         if (count > 2) currentFormat = FORMATS[0];
         submitBtn.disabled = false;
+        renderPlayersToggle(false);
         renderFormatField();
         renderSetupForm(count);
       });
+    });
+
+    function renderPlayersToggle(open) {
+      document.getElementById("playersToggleLabel").textContent =
+        playerCount > 2 ? `${playerCount}-player Commander` : `${playerCount} players`;
+      document.getElementById("playerCountOptions").hidden = !open;
+      document.getElementById("playersToggle").setAttribute("aria-expanded", String(open));
+    }
+
+    document.getElementById("playersToggle").addEventListener("click", () => {
+      renderPlayersToggle(document.getElementById("playerCountOptions").hidden);
     });
 
     function renderFormatField() {
@@ -1675,7 +1754,14 @@
       }
 
       setupError.classList.remove("visible");
+      startGame(
+        result,
+        currentFormat,
+        currentFormat.set ? document.getElementById("setName").value.trim() : ""
+      );
+    });
 
+    function startGame(players, format, setName) {
       const dailyGame = createDailyGameId();
 
       game = {
@@ -1685,16 +1771,17 @@
         endedAt: null,
         winner: null,
         currentTurn: 1,
-        format: currentFormat,
-        setName: currentFormat.set ? document.getElementById("setName").value.trim() : "",
-        players: result
+        format,
+        setName,
+        players: players.map((player) => ({ ...player, eliminated: false, eliminatedOnTurn: null }))
       };
 
+      resetEndScreen();
       document.getElementById("matchId").textContent = game.match_id;
       document.getElementById("gameFormat").textContent = formatSummary(game.format, game.setName);
       showScreen("gameScreen");
       renderGame();
-    });
+    }
 
     function playerDeckText(player) {
       return deckLabel(game.format, player) || game.setName || game.format.name;
@@ -1843,6 +1930,7 @@
         </label>
       `).join("");
 
+      document.getElementById("drawTurnInput").value = String(winTurnValue() || game.currentTurn || 1);
       drawModalOverlay.classList.add("visible");
     }
 
@@ -1864,9 +1952,15 @@
         return;
       }
 
+      const turn = Number(document.getElementById("drawTurnInput").value);
+      if (!Number.isInteger(turn) || turn < 1) {
+        showToast("Please enter the turn the draw happened on.", "failure");
+        return;
+      }
+
       const selectedNames = Array.from(checkboxes).map((cb) => cb.dataset.name);
       drawModalOverlay.classList.remove("visible");
-      declareDraw(selectedNames);
+      declareDraw(selectedNames, turn);
     });
 
     function lastEliminationTurn() {
@@ -1880,8 +1974,9 @@
       return Math.max(game.currentTurn || 0, lastEliminationTurn() || 0) || "";
     }
 
-    function declareDraw(winnerNames) {
+    function declareDraw(winnerNames, turn) {
       game.endedAt = new Date().toISOString();
+      game.currentTurn = turn;
 
       const winnerList = winnerNames.join(", ");
       document.getElementById("winnerTrophy").textContent = "🤝";
@@ -1892,7 +1987,6 @@
 
       const rows = game.players.map((player) => {
         const isWinner = winnerNames.includes(player.name);
-        const isLoser = !isWinner && player.eliminated;
 
         return {
           match_id: game.match_id,
@@ -1903,15 +1997,14 @@
           color_identity: player.color_identity || "",
           bracket: player.bracket,
           turn_order: player.seat,
-          eliminated_turn: isLoser ? player.eliminatedOnTurn : "",
+          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || turn),
           win: isWinner ? 1 : 0,
-          win_turn: isWinner ? "Draw" : "",
+          win_turn: isWinner ? turn : "",
           draw: isWinner ? 1 : 0
         };
       });
 
       game.rows = rows;
-      jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
       saveGameRows();
@@ -1987,6 +2080,7 @@
           ].filter(Boolean).join(" • ")
         : "Game ended";
 
+      const winTurn = winTurnValue();
       const rows = game.players.map((player) => {
         const isWinner = winner && player.name === winner.name;
 
@@ -1999,93 +2093,105 @@
           color_identity: player.color_identity || "",
           bracket: player.bracket,
           turn_order: player.seat,
-          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || ""),
+          eliminated_turn: isWinner ? "" : (player.eliminatedOnTurn || (winner ? winTurn : "")),
           win: isWinner ? 1 : 0,
-          win_turn: isWinner ? winTurnValue() : "",
+          win_turn: isWinner ? winTurn : "",
           draw: 0
         };
       });
 
       game.rows = rows;
-      jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
       saveGameRows();
     }
 
-    async function saveGameRows() {
-      const button = document.getElementById("postJson");
+    function setSaveStatus(message, color) {
       const status = document.getElementById("postStatus");
+      status.textContent = message;
+      status.style.color = color;
+      status.classList.toggle("visible", Boolean(message));
+    }
 
-      if (!game || !game.rows || !game.rows.length) {
-        status.textContent = "No game data available yet.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
-        showToast("No game data available.", "failure");
-        return false;
+    function resetEndScreen() {
+      setSaveStatus("", "");
+      document.getElementById("retrySave").hidden = true;
+    }
+
+    function useFinalMatchId(savedGame, matchId) {
+      savedGame.match_id = matchId;
+      savedGame.rows.forEach((row) => (row.match_id = matchId));
+
+      const match = /^(.*)_(\d+)$/.exec(matchId);
+      if (match) {
+        const storageKey = `commander-game-count-${match[1]}`;
+        const counted = Number(localStorage.getItem(storageKey) || 0);
+        localStorage.setItem(storageKey, String(Math.max(counted, Number(match[2]))));
       }
+    }
+
+    async function saveGameRows() {
+      const savingGame = game;
+      const retry = document.getElementById("retrySave");
+      // A save can finish after the players have already moved on to another game.
+      const isCurrent = () => game === savingGame;
+
+      if (!savingGame || !savingGame.rows || !savingGame.rows.length) return false;
 
       if (!GOOGLE_APPS_SCRIPT_URL) {
-        status.textContent = "Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
+        setSaveStatus("Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.", "#ff9a9d");
         showToast("Google Apps Script URL is not configured.", "failure");
         return false;
       }
 
-      button.disabled = true;
-      button.textContent = "Saving...";
+      retry.hidden = true;
+      setSaveStatus("Saving game...", "var(--muted)");
 
       try {
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: {
             "Content-Type": "text/plain;charset=utf-8"
           },
-          body: JSON.stringify(game.rows)
+          body: JSON.stringify(savingGame.rows)
         });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || "Save failed");
 
-        game.saved = true;
-        status.textContent = "Game data submitted.";
-        status.style.color = "var(--green)";
-        status.classList.add("visible");
+        // The sheet has the final say on the ID: it moves the game to the next free number for the
+        // day if another device already used the suggested one.
+        if (result.match_id) useFinalMatchId(savingGame, result.match_id);
+        if (!result.already_saved) cachedHistoryRows = [...cachedHistoryRows, ...savingGame.rows];
+
+        savingGame.saved = true;
+        if (isCurrent()) setSaveStatus(`Game saved as ${savingGame.match_id}.`, "var(--green)");
         showToast("Game saved successfully.", "success");
         return true;
       } catch (error) {
         console.error("Save failed:", error);
-
-        status.textContent = "Game save failed. Check the Apps Script URL and your connection.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
+        if (isCurrent()) {
+          setSaveStatus("Game save failed. Check your connection and try again.", "#ff9a9d");
+          retry.hidden = false;
+        }
         showToast("Game save failed.", "failure");
         return false;
-      } finally {
-        button.disabled = false;
-        button.textContent = game && game.saved ? "POST Again" : "POST to Apps Script";
       }
     }
 
-    document.getElementById("copyJson").addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(jsonOutput.value);
-        const button = document.getElementById("copyJson");
-        button.textContent = "Copied!";
-        setTimeout(() => (button.textContent = "Copy JSON"), 1400);
-      } catch {
-        jsonOutput.select();
-        document.execCommand("copy");
-      }
+    document.getElementById("retrySave").addEventListener("click", () => {
+      saveGameRows();
     });
 
-    document.getElementById("postJson").addEventListener("click", () => {
-      if (game && game.saved) {
-        const again = window.confirm(
-          "This game was already submitted. Posting again will add duplicate rows to your sheet. Continue?"
-        );
-        if (!again) return;
-      }
-      saveGameRows();
+    document.getElementById("playAgain").addEventListener("click", () => {
+      if (!game) return;
+      startGame(game.players, game.format, game.setName);
+    });
+
+    document.getElementById("endNewGame").addEventListener("click", () => {
+      game = null;
+      resetSetupForm();
+      showScreen("setupScreen");
+      loadHistory({ quiet: true });
     });
 
     document.getElementById("resetForm").addEventListener("click", () => {
@@ -2094,9 +2200,6 @@
 
     document.getElementById("newGame").addEventListener("click", () => {
       game = null;
-      document.getElementById("postStatus").classList.remove("visible");
-      jsonOutput.value = "";
-      document.getElementById("postJson").textContent = "POST to Apps Script";
       showScreen("historyScreen");
       loadHistory();
     });
@@ -2104,6 +2207,7 @@
     document.getElementById("startNewGame").addEventListener("click", () => {
       resetSetupForm();
       showScreen("setupScreen");
+      loadHistory({ quiet: true });
     });
 
     document.getElementById("cancelSetup").addEventListener("click", () => {
@@ -2115,16 +2219,19 @@
     });
 
     document.getElementById("historyPlayerFilter").addEventListener("input", () => {
-      renderHistoryList(cachedHistoryRows);
+      renderHistoryList(visibleHistoryRows());
     });
 
-    async function loadHistory() {
+    // quiet: refresh in the background (used for game numbering) without clearing the list or
+    // showing an error if the sheet can't be reached.
+    async function loadHistory({ quiet = false } = {}) {
       const historyList = document.getElementById("historyList");
-      historyList.innerHTML = `<div class="history-loading">Loading games...</div>`;
-
-      ["histTotalGames", "histTotalPlayers", "histTotalCommanders", "histAvgTurns"].forEach((id) => {
-        document.getElementById(id).textContent = "—";
-      });
+      if (!quiet) {
+        historyList.innerHTML = `<div class="history-loading">Loading games...</div>`;
+        ["histTotalGames", "histTotalPlayers", "histTotalCommanders", "histAvgTurns"].forEach((id) => {
+          document.getElementById(id).textContent = "—";
+        });
+      }
 
       try {
         const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=history`);
@@ -2137,10 +2244,11 @@
 
         cachedHistoryRows = data.rows || [];
 
-        renderHistoryStats(cachedHistoryRows);
-        renderHistoryList(cachedHistoryRows);
+        renderHistoryStats(visibleHistoryRows());
+        renderHistoryList(visibleHistoryRows());
       } catch (error) {
         console.error("History load failed:", error);
+        if (quiet) return;
         historyList.innerHTML = `
           <div class="history-empty">
             Could not load games.<br/>
@@ -2150,10 +2258,74 @@
       }
     }
 
+    // Each game's rows are saved together, so a game is a run of consecutive rows sharing a match ID.
+    // This keeps two games apart even if they were given the same ID on different devices.
+    function groupGames(rows) {
+      const games = [];
+      rows.forEach((row) => {
+        const last = games[games.length - 1];
+        if (last && last[0] === row.match_id) {
+          last[1].push(row);
+        } else {
+          games.push([row.match_id, [row]]);
+        }
+      });
+      return games;
+    }
+
+    const cardPreview = document.getElementById("cardPreview");
+    const cardPreviewImage = document.getElementById("cardPreviewImage");
+    const cardPreviewStatus = document.getElementById("cardPreviewStatus");
+
+    function showCardPreview(name) {
+      cardPreview.hidden = false;
+      cardPreviewImage.alt = name;
+      cardPreviewStatus.textContent = "Loading card...";
+      cardPreviewImage.dataset.card = name;
+      cardPreviewImage.hidden = false;
+      cardPreviewImage.src =
+        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}&format=image&version=normal`;
+    }
+
+    function hideCardPreview() {
+      cardPreview.hidden = true;
+      cardPreviewImage.removeAttribute("src");
+    }
+
+    cardPreviewImage.addEventListener("load", () => {
+      cardPreviewStatus.textContent = "Tap anywhere to close";
+    });
+
+    cardPreviewImage.addEventListener("error", () => {
+      if (!cardPreviewImage.getAttribute("src")) return;
+      cardPreviewImage.hidden = true;
+      cardPreviewStatus.textContent = `Couldn't load a Scryfall image for ${cardPreviewImage.dataset.card}.`;
+    });
+
+    cardPreview.addEventListener("click", hideCardPreview);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !cardPreview.hidden) hideCardPreview();
+    });
+
+    document.getElementById("historyList").addEventListener("click", (event) => {
+      const link = event.target.closest(".commander-link");
+      if (link) showCardPreview(link.dataset.card);
+    });
+
+    // Past Games only lists Commander games for now. Set to false to show every format again (each
+    // card then gets a format tag). Game numbering always uses the full history.
+    const HISTORY_COMMANDER_ONLY = true;
+
+    function visibleHistoryRows() {
+      return HISTORY_COMMANDER_ONLY
+        ? cachedHistoryRows.filter((row) => getFormat(row.format).deck === "commander")
+        : cachedHistoryRows;
+    }
+
     function renderHistoryStats(rows) {
       if (!rows.length) return;
 
-      const uniqueGames = new Set(rows.map((r) => r.match_id)).size;
+      const uniqueGames = groupGames(rows).length;
       const uniquePlayers = new Set(
         rows.map((r) => String(r.player_name).toLowerCase().trim())
       ).size;
@@ -2165,7 +2337,7 @@
       ).size;
 
       const winTurns = rows
-        .filter((r) => (r.win == 1 || r.win === "1") && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
+        .filter((r) => (r.win == 1 || r.win === "1") && r.draw != 1 && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
         .map((r) => Number(r.win_turn));
 
       const avgTurns = winTurns.length
@@ -2214,14 +2386,15 @@
         return;
       }
 
-      const gamesMap = new Map();
-      filteredRows.forEach((row) => {
-        const id = row.match_id;
-        if (!gamesMap.has(id)) gamesMap.set(id, []);
-        gamesMap.get(id).push(row);
-      });
-
-      const gameEntries = Array.from(gamesMap.entries()).reverse();
+      const gameEntries = groupGames(rows)
+        .map(([matchId, players]) => [
+          matchId,
+          filterValue
+            ? players.filter((r) => String(r.player_name).toLowerCase().includes(filterValue))
+            : players
+        ])
+        .filter(([, players]) => players.length)
+        .reverse();
 
       historyList.innerHTML = gameEntries.map(([matchId, players]) => {
         const parts = String(matchId).split("_");
@@ -2234,18 +2407,26 @@
         );
         const format = getFormat(players[0].format);
         const setName = format.set ? String(players[0].set_or_theme || "") : "";
+        // Games saved before losers were given the final turn left them blank.
+        const endTurn = (players.find((p) =>
+          (p.win == 1 || p.win === "TRUE") && p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn))
+        ) || {}).win_turn;
+        const gameOver = players.some((p) => p.win == 1 || p.win === "TRUE");
 
         const playerRows = sorted.map((p) => {
           const isWin = p.win == 1 || p.win === "1" || p.win === "TRUE";
           const isDraw = p.draw == 1 || p.draw === "1";
-          const elim = p.eliminated_turn;
+          const elim = p.eliminated_turn !== "" && p.eliminated_turn != null ? p.eliminated_turn : endTurn;
           const bracketLabel = format.deck === "commander"
             ? BRACKET_NAMES[String(p.bracket)] || p.bracket
             : "";
-          const deckText = escapeHtml(String(deckLabel(format, {
+          const deckName = escapeHtml(String(deckLabel(format, {
             commander: p.commander_name,
             set_or_theme: p.set_or_theme
           })));
+          const deckText = format.deck === "commander" && deckName
+            ? `<button class="commander-link" type="button" data-card="${deckName}">${deckName}</button>`
+            : deckName;
           const deckParts = [
             deckText,
             deckPipsHtml(format, p.color_identity),
@@ -2254,12 +2435,16 @@
 
           let resultHtml = "";
           if (isWin && isDraw) {
-            resultHtml = `<span style="color:var(--purple)">Draw</span>`;
+            // Draws saved before the turn was recorded have "Draw" in win_turn instead of a number.
+            const dt = p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn)) ? ` T${p.win_turn}` : "";
+            resultHtml = `<span style="color:var(--purple)">Draw${dt}</span>`;
           } else if (isWin) {
             const wt = p.win_turn !== "" && p.win_turn != null ? ` T${p.win_turn}` : "";
             resultHtml = `<span style="color:var(--green)">Won${wt}</span>`;
           } else if (elim !== "" && elim != null) {
             resultHtml = `<span style="color:var(--red)">Out T${elim}</span>`;
+          } else if (gameOver) {
+            resultHtml = `<span style="color:var(--red)">Out</span>`;
           } else {
             resultHtml = `<span style="color:var(--muted)">Playing</span>`;
           }
@@ -2279,10 +2464,14 @@
         return `
           <div class="history-game-card">
             <div class="history-game-header">
-              <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
+              <div class="history-game-title">
+                ${HISTORY_COMMANDER_ONLY
+                  ? ""
+                  : `<span class="history-format-tag">${escapeHtml(formatSummary(format, setName))}</span>`}
+                <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
+              </div>
               <span class="history-date">${escapeHtml(String(dateStr))}</span>
             </div>
-            <div class="history-format">${escapeHtml(formatSummary(format, setName))}</div>
             ${playerRows}
           </div>`;
       }).join("");
