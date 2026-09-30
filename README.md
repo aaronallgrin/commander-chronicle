@@ -28,6 +28,8 @@ npm run preview
 4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
 5. The game is saved automatically (one row per player) and the end screen shows whether it worked, with a retry button if it didn't. From there, **Play Again** starts a new game with the same players, decks and seats, **New Game** opens a fresh setup, and **Back to Past Games** returns home.
 
+Past Games shows only Commander games by default. The **Formats** dropdown at the top has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
+
 ### Formats
 
 | Format | Group | What's recorded per player |
