@@ -34,6 +34,8 @@ The player filter matches the start of a name or of any word in it, so "drew" fi
 
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
+Each game card lists players by `turn_order`. Players with a blank turn order (common in older data) come after any seated players, in the order they appear in the sheet.
+
 ### Formats
 
 | Format | Group | What's recorded per player |

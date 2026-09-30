@@ -2581,9 +2581,9 @@
           ? `${parts[0]}/${parts[1]}/${parts[2]}`
           : matchId;
 
-        const sorted = [...players].sort(
-          (a, b) => Number(a.turn_order) - Number(b.turn_order)
-        );
+        // Older games have no turn order; those players keep their sheet order, after any seated ones.
+        const seat = (p) => turnNumber(p.turn_order) || Infinity;
+        const sorted = [...players].sort((a, b) => (seat(a) - seat(b)) || 0);
         const format = getFormat(players[0].format);
         const setName = format.set ? String(players[0].set_or_theme || "") : "";
         // Games saved before losers were given the final turn left them blank.
