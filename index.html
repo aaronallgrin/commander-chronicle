@@ -568,6 +568,38 @@
       color: var(--gold-light);
     }
 
+    .bracket-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    @media (min-width: 520px) {
+      .bracket-selector { grid-template-columns: repeat(6, 1fr); }
+    }
+
+    .bracket-btn {
+      min-height: 44px;
+      padding: 10px 6px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      font-weight: bold;
+      transition: all 120ms ease;
+    }
+
+    .bracket-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .bracket-btn.selected {
+      border-color: var(--gold);
+      background: rgba(215, 169, 75, 0.15);
+      color: var(--gold-light);
+    }
+
     .draw-player-option {
       display: flex;
       align-items: center;
@@ -963,12 +995,22 @@
     let pendingEliminationIndex = null;
     let cachedHistoryRows = [];
 
+    // Values are what gets saved to the sheet; keep them stable so past games still display.
+    const BRACKET_OPTIONS = [
+      ["p", "Precon"],
+      ["1", "1"],
+      ["2", "2"],
+      ["3", "3"],
+      ["4", "4"],
+      ["5", "cEDH"]
+    ];
+
     const BRACKET_NAMES = {
       "p": "Precon",
-      "1": "Exhibition",
-      "2": "Core",
-      "3": "Upgraded",
-      "4": "Optimized",
+      "1": "Bracket 1",
+      "2": "Bracket 2",
+      "3": "Bracket 3",
+      "4": "Bracket 4",
       "5": "cEDH"
     };
 
@@ -1123,16 +1165,13 @@
           </div>
 
           <div class="field">
-            <label for="bracket-${i}">Bracket</label>
-            <select id="bracket-${i}" name="bracket-${i}" required>
-              <option value="">Select bracket</option>
-              <option value="p">Precon</option>
-              <option value="1">Exhibition</option>
-              <option value="2">Core</option>
-              <option value="3">Upgraded</option>
-              <option value="4">Optimized</option>
-              <option value="5">cEDH</option>
-            </select>
+            <label id="bracket-label-${i}">Bracket</label>
+            <input id="bracket-${i}" name="bracket-${i}" type="hidden" />
+            <div class="bracket-selector" role="group" aria-labelledby="bracket-label-${i}">
+              ${BRACKET_OPTIONS.map(([value, label]) => `
+                <button class="bracket-btn" type="button" data-bracket="${value}" aria-pressed="false">${label}</button>
+              `).join("")}
+            </div>
           </div>
         `;
 
@@ -1143,6 +1182,19 @@
         const commanderId = fieldset.querySelector(`#commander-id-${i}`);
         const colorIdentity = fieldset.querySelector(`#color-identity-${i}`);
         const selected = fieldset.querySelector(`#selected-${i}`);
+        const bracketInput = fieldset.querySelector(`#bracket-${i}`);
+        const bracketButtons = fieldset.querySelectorAll(".bracket-btn");
+
+        bracketButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            bracketInput.value = btn.dataset.bracket;
+            bracketButtons.forEach((b) => {
+              const isSelected = b === btn;
+              b.classList.toggle("selected", isSelected);
+              b.setAttribute("aria-pressed", String(isSelected));
+            });
+          });
+        });
 
         commanderInput.addEventListener("input", () => {
           commanderId.value = "";
