@@ -674,6 +674,11 @@
       font-size: 0.9rem;
     }
 
+    .history-match-label {
+      color: var(--muted);
+      font-weight: normal;
+    }
+
     .history-date {
       color: var(--muted);
       font-size: 0.78rem;
@@ -730,8 +735,8 @@
 
     .mana-pips {
       display: inline-flex;
-      gap: 2px;
-      margin: 0 4px;
+      gap: 3px;
+      margin-right: 8px;
       vertical-align: -2px;
     }
 
@@ -1876,7 +1881,7 @@
       const saved = String(colorIdentity || "").toUpperCase();
       const colors = ["W", "U", "B", "R", "G"].filter((c) => saved.includes(c));
       const symbols = colors.length ? colors : ["C"];
-      return `<span class="mana-pips">${symbols.map((c) =>
+      return `&ensp;<span class="mana-pips">${symbols.map((c) =>
         `<img class="mana-pip" src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" />`
       ).join("")}</span>`;
     }
@@ -1961,7 +1966,7 @@
         return `
           <div class="history-game-card">
             <div class="history-game-header">
-              <span class="history-match-id">${escapeHtml(String(matchId))}</span>
+              <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
               <span class="history-date">${escapeHtml(String(dateStr))}</span>
             </div>
             ${playerRows}
