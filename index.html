@@ -251,6 +251,13 @@
       margin-top: 18px;
     }
 
+    .new-game-btn {
+      min-height: 56px;
+      margin-bottom: 18px;
+      font-size: 1.15rem;
+      box-shadow: var(--shadow);
+    }
+
     .error {
       display: none;
       margin: 12px 0 0;
@@ -806,7 +813,7 @@
 
     <div class="credit">Created by aaronallgrin • Last update 2026/09/30</div>
 
-    <section id="setupScreen" class="screen active">
+    <section id="setupScreen" class="screen">
       <div class="panel">
         <h2>Prepare the Table</h2>
         <p class="hint">
@@ -831,9 +838,7 @@
           <div class="actions">
             <button class="primary" type="submit" id="submitBtn">Begin Game</button>
             <button class="ghost" type="button" id="resetForm">Clear Form</button>
-            <button class="ghost" type="button" id="viewHistory" style="width:100%;">
-              Past Games
-            </button>
+            <button class="ghost" type="button" id="cancelSetup">Cancel</button>
           </div>
         </form>
       </div>
@@ -871,7 +876,9 @@
       </div>
     </section>
 
-    <section id="historyScreen" class="screen">
+    <section id="historyScreen" class="screen active">
+      <button class="primary new-game-btn" type="button" id="startNewGame">✦ New Game</button>
+
       <div class="panel">
         <h2>Past Games</h2>
 
@@ -903,8 +910,7 @@
         <div id="historyList"></div>
 
         <div class="actions">
-          <button class="primary" type="button" id="refreshHistory">Refresh</button>
-          <button class="ghost" type="button" id="backFromHistory">Back</button>
+          <button class="ghost" type="button" id="refreshHistory">Refresh</button>
         </div>
       </div>
     </section>
@@ -927,7 +933,7 @@
         <div class="actions">
           <button class="primary" type="button" id="copyJson">Copy JSON</button>
           <button class="secondary" type="button" id="postJson">POST to Apps Script</button>
-          <button class="ghost" type="button" id="newGame">Start New Game</button>
+          <button class="ghost" type="button" id="newGame">Back to Past Games</button>
         </div>
 
         <p id="postStatus" class="error" role="status"></p>
@@ -1692,21 +1698,21 @@
       document.getElementById("postStatus").classList.remove("visible");
       jsonOutput.value = "";
       document.getElementById("postJson").textContent = "POST to Apps Script";
-      resetSetupForm();
-      showScreen("setupScreen");
-    });
-
-    document.getElementById("viewHistory").addEventListener("click", () => {
       showScreen("historyScreen");
       loadHistory();
     });
 
-    document.getElementById("refreshHistory").addEventListener("click", () => {
-      loadHistory();
+    document.getElementById("startNewGame").addEventListener("click", () => {
+      resetSetupForm();
+      showScreen("setupScreen");
     });
 
-    document.getElementById("backFromHistory").addEventListener("click", () => {
-      showScreen("setupScreen");
+    document.getElementById("cancelSetup").addEventListener("click", () => {
+      showScreen("historyScreen");
+    });
+
+    document.getElementById("refreshHistory").addEventListener("click", () => {
+      loadHistory();
     });
 
     document.getElementById("historyPlayerFilter").addEventListener("input", () => {
@@ -1855,6 +1861,7 @@
     }
 
     renderSetupForm(playerCount);
+    loadHistory();
   </script>
 </body>
 </html>
