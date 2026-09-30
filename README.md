@@ -1,6 +1,6 @@
 # Commander Chronicle
 
-A mobile-first Magic: The Gathering game tracker, built around Commander. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, then copy or POST the game as JSON to a Google Apps Script web app. Two-player games can also be recorded in other formats.
+A mobile-first Magic: The Gathering game tracker, built around Commander. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, and the game is saved to a Google Sheet through a Google Apps Script web app. Two-player games can also be recorded in other formats.
 
 Live site: [https://aaronallgrin.github.io/commander-chronicle/](https://aaronallgrin.github.io/commander-chronicle/)
 
@@ -26,7 +26,7 @@ npm run preview
 2. With 2 players, Commander is still the default, but **Format** lets you pick another (see below).
 3. On the battlefield, advance the turn counter and mark players eliminated (the current turn is suggested).
 4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
-5. The end screen shows a JSON array of one row per player, ready to POST.
+5. The game is saved automatically (one row per player) and the end screen shows whether it worked, with a retry button if it didn't. From there, **Play Again** starts a new game with the same players, decks and seats, **New Game** opens a fresh setup, and **Back to Past Games** returns home.
 
 ### Formats
 
@@ -66,7 +66,7 @@ Each row looks like:
 
 The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint.
 
-Replace that constant if you deploy your own script. The app still works without a live endpoint: you can copy the JSON from the end screen.
+Replace that constant if you deploy your own script.
 
 ### Setting up the script
 

@@ -404,17 +404,14 @@
       margin: 18px 0 0;
     }
 
-    .json-output {
+    #postStatus {
+      margin: 0 0 4px;
+      text-align: center;
+    }
+
+    .retry-save {
       width: 100%;
-      min-height: 220px;
-      resize: vertical;
-      color: #d9e3d1;
-      background: #090c11;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.78rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+      margin-top: 12px;
     }
 
     .winner {
@@ -1069,19 +1066,14 @@
       </div>
 
       <div class="panel">
-        <h2>Game JSON</h2>
-        <p class="hint">
-          This object is ready to POST to a Google Apps Script web app endpoint.
-        </p>
-        <textarea id="jsonOutput" class="json-output" readonly></textarea>
+        <p id="postStatus" class="error" role="status"></p>
+        <button class="secondary retry-save" type="button" id="retrySave" hidden>Try Saving Again</button>
 
         <div class="actions">
-          <button class="primary" type="button" id="copyJson">Copy JSON</button>
-          <button class="secondary" type="button" id="postJson">POST to Apps Script</button>
+          <button class="primary" type="button" id="playAgain">Play Again</button>
+          <button class="ghost" type="button" id="endNewGame">New Game</button>
           <button class="ghost" type="button" id="newGame">Back to Past Games</button>
         </div>
-
-        <p id="postStatus" class="error" role="status"></p>
       </div>
     </section>
   </main>
@@ -1093,7 +1085,6 @@
     const setupForm = document.getElementById("setupForm");
     const setupError = document.getElementById("setupError");
     const playerCards = document.getElementById("playerCards");
-    const jsonOutput = document.getElementById("jsonOutput");
     const modalOverlay = document.getElementById("modalOverlay");
     const modalTitle = document.getElementById("modalTitle");
     const eliminationTurn = document.getElementById("eliminationTurn");
@@ -1705,7 +1696,14 @@
       }
 
       setupError.classList.remove("visible");
+      startGame(
+        result,
+        currentFormat,
+        currentFormat.set ? document.getElementById("setName").value.trim() : ""
+      );
+    });
 
+    function startGame(players, format, setName) {
       const dailyGame = createDailyGameId();
 
       game = {
@@ -1715,16 +1713,17 @@
         endedAt: null,
         winner: null,
         currentTurn: 1,
-        format: currentFormat,
-        setName: currentFormat.set ? document.getElementById("setName").value.trim() : "",
-        players: result
+        format,
+        setName,
+        players: players.map((player) => ({ ...player, eliminated: false, eliminatedOnTurn: null }))
       };
 
+      resetEndScreen();
       document.getElementById("matchId").textContent = game.match_id;
       document.getElementById("gameFormat").textContent = formatSummary(game.format, game.setName);
       showScreen("gameScreen");
       renderGame();
-    });
+    }
 
     function playerDeckText(player) {
       return deckLabel(game.format, player) || game.setName || game.format.name;
@@ -1941,7 +1940,6 @@
       });
 
       game.rows = rows;
-      jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
       saveGameRows();
@@ -2037,34 +2035,39 @@
       });
 
       game.rows = rows;
-      jsonOutput.value = JSON.stringify(rows, null, 2);
 
       showScreen("endScreen");
       saveGameRows();
     }
 
-    async function saveGameRows() {
-      const button = document.getElementById("postJson");
+    function setSaveStatus(message, color) {
       const status = document.getElementById("postStatus");
+      status.textContent = message;
+      status.style.color = color;
+      status.classList.toggle("visible", Boolean(message));
+    }
 
-      if (!game || !game.rows || !game.rows.length) {
-        status.textContent = "No game data available yet.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
-        showToast("No game data available.", "failure");
-        return false;
-      }
+    function resetEndScreen() {
+      setSaveStatus("", "");
+      document.getElementById("retrySave").hidden = true;
+    }
+
+    async function saveGameRows() {
+      const savingGame = game;
+      const retry = document.getElementById("retrySave");
+      // A save can finish after the players have already moved on to another game.
+      const isCurrent = () => game === savingGame;
+
+      if (!savingGame || !savingGame.rows || !savingGame.rows.length) return false;
 
       if (!GOOGLE_APPS_SCRIPT_URL) {
-        status.textContent = "Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
+        setSaveStatus("Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.", "#ff9a9d");
         showToast("Google Apps Script URL is not configured.", "failure");
         return false;
       }
 
-      button.disabled = true;
-      button.textContent = "Saving...";
+      retry.hidden = true;
+      setSaveStatus("Saving game...", "var(--muted)");
 
       try {
         await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -2073,49 +2076,37 @@
           headers: {
             "Content-Type": "text/plain;charset=utf-8"
           },
-          body: JSON.stringify(game.rows)
+          body: JSON.stringify(savingGame.rows)
         });
 
-        game.saved = true;
-        status.textContent = "Game data submitted.";
-        status.style.color = "var(--green)";
-        status.classList.add("visible");
+        savingGame.saved = true;
+        if (isCurrent()) setSaveStatus("Game saved.", "var(--green)");
         showToast("Game saved successfully.", "success");
         return true;
       } catch (error) {
         console.error("Save failed:", error);
-
-        status.textContent = "Game save failed. Check the Apps Script URL and your connection.";
-        status.style.color = "#ff9a9d";
-        status.classList.add("visible");
+        if (isCurrent()) {
+          setSaveStatus("Game save failed. Check your connection and try again.", "#ff9a9d");
+          retry.hidden = false;
+        }
         showToast("Game save failed.", "failure");
         return false;
-      } finally {
-        button.disabled = false;
-        button.textContent = game && game.saved ? "POST Again" : "POST to Apps Script";
       }
     }
 
-    document.getElementById("copyJson").addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(jsonOutput.value);
-        const button = document.getElementById("copyJson");
-        button.textContent = "Copied!";
-        setTimeout(() => (button.textContent = "Copy JSON"), 1400);
-      } catch {
-        jsonOutput.select();
-        document.execCommand("copy");
-      }
+    document.getElementById("retrySave").addEventListener("click", () => {
+      saveGameRows();
     });
 
-    document.getElementById("postJson").addEventListener("click", () => {
-      if (game && game.saved) {
-        const again = window.confirm(
-          "This game was already submitted. Posting again will add duplicate rows to your sheet. Continue?"
-        );
-        if (!again) return;
-      }
-      saveGameRows();
+    document.getElementById("playAgain").addEventListener("click", () => {
+      if (!game) return;
+      startGame(game.players, game.format, game.setName);
+    });
+
+    document.getElementById("endNewGame").addEventListener("click", () => {
+      game = null;
+      resetSetupForm();
+      showScreen("setupScreen");
     });
 
     document.getElementById("resetForm").addEventListener("click", () => {
@@ -2124,9 +2115,6 @@
 
     document.getElementById("newGame").addEventListener("click", () => {
       game = null;
-      document.getElementById("postStatus").classList.remove("visible");
-      jsonOutput.value = "";
-      document.getElementById("postJson").textContent = "POST to Apps Script";
       showScreen("historyScreen");
       loadHistory();
     });
