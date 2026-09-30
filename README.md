@@ -2,6 +2,8 @@
 
 A mobile-first Magic: The Gathering Commander tracker. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, then copy or POST the game as JSON to a Google Apps Script web app.
 
+Live site: [https://aaronallgrin.github.io/commander-chronicle/](https://aaronallgrin.github.io/commander-chronicle/)
+
 ## Run locally
 
 ```bash
@@ -62,4 +64,8 @@ To check it, open `YOUR_EXEC_URL?action=history` in a browser. You should see JS
 
 ## Hosting on GitHub Pages
 
-`index.html` is fully self-contained, so GitHub Pages can serve it directly with no build step. Put it at the root of the repository, then enable **Settings > Pages > Deploy from a branch** (`main`, `/ (root)`).
+`index.html` is fully self-contained, so GitHub Pages can serve it directly with no build step. The live site is published from `main` at `/ (root)`.
+
+Keep `index.html` at the repository root. GitHub's **Add file > Upload files** page will overwrite that file if another HTML page is uploaded with the same name, which takes the live site down. Prefer git, GitHub Desktop, or Cursor when changing files.
+
+`.nojekyll` tells GitHub Pages to serve the files as-is instead of running Jekyll.
