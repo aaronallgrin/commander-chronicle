@@ -709,9 +709,6 @@
     .history-commander-name {
       color: var(--muted);
       font-size: 0.8rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .history-result {
@@ -722,9 +719,27 @@
 
     .history-stats-bar {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
       margin-bottom: 18px;
+    }
+
+    @media (min-width: 560px) {
+      .history-stats-bar { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .mana-pips {
+      display: inline-flex;
+      gap: 2px;
+      margin: 0 4px;
+      vertical-align: -2px;
+    }
+
+    .history-bracket { white-space: nowrap; }
+
+    .mana-pip {
+      width: 14px;
+      height: 14px;
     }
 
     .history-stat {
@@ -776,15 +791,6 @@
     }
 
     @media (min-width: 560px) {
-      .player-setup {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 14px;
-      }
-
-      .player-setup legend { grid-column: 1 / -1; }
-      .player-setup .field:first-of-type { grid-column: 1 / -1; }
-
       .actions {
         grid-template-columns: 1fr auto;
       }
@@ -932,6 +938,10 @@
           <div class="history-stat">
             <strong id="histTotalPlayers">—</strong>
             <span>Unique Players</span>
+          </div>
+          <div class="history-stat">
+            <strong id="histTotalCommanders">—</strong>
+            <span>Unique Commanders</span>
           </div>
           <div class="history-stat">
             <strong id="histAvgTurns">—</strong>
@@ -1808,7 +1818,7 @@
       const historyList = document.getElementById("historyList");
       historyList.innerHTML = `<div class="history-loading">Loading games...</div>`;
 
-      ["histTotalGames", "histTotalPlayers", "histAvgTurns"].forEach((id) => {
+      ["histTotalGames", "histTotalPlayers", "histTotalCommanders", "histAvgTurns"].forEach((id) => {
         document.getElementById(id).textContent = "—";
       });
 
@@ -1843,6 +1853,9 @@
       const uniquePlayers = new Set(
         rows.map((r) => String(r.player_name).toLowerCase().trim())
       ).size;
+      const uniqueCommanders = new Set(
+        rows.map((r) => String(r.commander_name).toLowerCase().trim()).filter(Boolean)
+      ).size;
 
       const winTurns = rows
         .filter((r) => (r.win == 1 || r.win === "1") && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
@@ -1854,7 +1867,18 @@
 
       document.getElementById("histTotalGames").textContent = uniqueGames;
       document.getElementById("histTotalPlayers").textContent = uniquePlayers;
+      document.getElementById("histTotalCommanders").textContent = uniqueCommanders;
       document.getElementById("histAvgTurns").textContent = avgTurns;
+    }
+
+    // Colors are saved like "B,G,R"; show them in the usual WUBRG order, or a colorless pip if none.
+    function manaPipsHtml(colorIdentity) {
+      const saved = String(colorIdentity || "").toUpperCase();
+      const colors = ["W", "U", "B", "R", "G"].filter((c) => saved.includes(c));
+      const symbols = colors.length ? colors : ["C"];
+      return `<span class="mana-pips">${symbols.map((c) =>
+        `<img class="mana-pip" src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" />`
+      ).join("")}</span>`;
     }
 
     function renderHistoryList(rows) {
@@ -1925,9 +1949,9 @@
               <div class="history-player-info">
                 <div class="history-player-name">${escapeHtml(String(p.player_name))}</div>
                 <div class="history-commander-name">
-                  ${escapeHtml(String(p.commander_name))}
-                  <span style="color:var(--border)"> • </span>
-                  <span>${escapeHtml(String(bracketLabel || ""))}</span>
+                  ${escapeHtml(String(p.commander_name))}${manaPipsHtml(p.color_identity)}${
+                    bracketLabel ? `<span class="history-bracket">(${escapeHtml(String(bracketLabel))})</span>` : ""
+                  }
                 </div>
               </div>
               <div class="history-result">${resultHtml}</div>
