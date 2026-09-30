@@ -938,6 +938,10 @@
         Select all players who tied for the victory.
       </p>
       <div id="drawPlayerList"></div>
+      <div class="field">
+        <label for="drawTurnInput">Turn the draw happened on</label>
+        <input id="drawTurnInput" type="number" min="1" max="999" inputmode="numeric" placeholder="Enter turn number" />
+      </div>
       <div class="modal-actions">
         <button class="ghost" type="button" id="drawCancel">Cancel</button>
         <button class="primary" type="button" id="drawConfirm">Confirm Draw</button>
@@ -1926,6 +1930,7 @@
         </label>
       `).join("");
 
+      document.getElementById("drawTurnInput").value = String(winTurnValue() || game.currentTurn || 1);
       drawModalOverlay.classList.add("visible");
     }
 
@@ -1947,9 +1952,15 @@
         return;
       }
 
+      const turn = Number(document.getElementById("drawTurnInput").value);
+      if (!Number.isInteger(turn) || turn < 1) {
+        showToast("Please enter the turn the draw happened on.", "failure");
+        return;
+      }
+
       const selectedNames = Array.from(checkboxes).map((cb) => cb.dataset.name);
       drawModalOverlay.classList.remove("visible");
-      declareDraw(selectedNames);
+      declareDraw(selectedNames, turn);
     });
 
     function lastEliminationTurn() {
@@ -1963,8 +1974,9 @@
       return Math.max(game.currentTurn || 0, lastEliminationTurn() || 0) || "";
     }
 
-    function declareDraw(winnerNames) {
+    function declareDraw(winnerNames, turn) {
       game.endedAt = new Date().toISOString();
+      game.currentTurn = turn;
 
       const winnerList = winnerNames.join(", ");
       document.getElementById("winnerTrophy").textContent = "🤝";
@@ -1988,7 +2000,7 @@
           turn_order: player.seat,
           eliminated_turn: isLoser ? player.eliminatedOnTurn : "",
           win: isWinner ? 1 : 0,
-          win_turn: isWinner ? "Draw" : "",
+          win_turn: isWinner ? turn : "",
           draw: isWinner ? 1 : 0
         };
       });
@@ -2325,7 +2337,7 @@
       ).size;
 
       const winTurns = rows
-        .filter((r) => (r.win == 1 || r.win === "1") && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
+        .filter((r) => (r.win == 1 || r.win === "1") && r.draw != 1 && !isNaN(Number(r.win_turn)) && r.win_turn !== "")
         .map((r) => Number(r.win_turn));
 
       const avgTurns = winTurns.length
@@ -2418,7 +2430,9 @@
 
           let resultHtml = "";
           if (isWin && isDraw) {
-            resultHtml = `<span style="color:var(--purple)">Draw</span>`;
+            // Draws saved before the turn was recorded have "Draw" in win_turn instead of a number.
+            const dt = p.win_turn !== "" && p.win_turn != null && !isNaN(Number(p.win_turn)) ? ` T${p.win_turn}` : "";
+            resultHtml = `<span style="color:var(--purple)">Draw${dt}</span>`;
           } else if (isWin) {
             const wt = p.win_turn !== "" && p.win_turn != null ? ` T${p.win_turn}` : "";
             resultHtml = `<span style="color:var(--green)">Won${wt}</span>`;
