@@ -1,6 +1,6 @@
 # Commander Chronicle
 
-A mobile-first Magic: The Gathering Commander tracker. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, then copy or POST the game as JSON to a Google Apps Script web app.
+A mobile-first Magic: The Gathering game tracker, built around Commander. Set up a pod, search commanders on Scryfall, record eliminations by turn, declare a winner or draw, then copy or POST the game as JSON to a Google Apps Script web app. Two-player games can also be recorded in other formats.
 
 Live site: [https://aaronallgrin.github.io/commander-chronicle/](https://aaronallgrin.github.io/commander-chronicle/)
 
@@ -22,10 +22,22 @@ npm run preview
 
 ## How a game is recorded
 
-1. Choose 3–6 players. Enter each name, search and select a commander, pick a unique seat order, and choose a bracket.
-2. On the battlefield, advance the turn counter and mark players eliminated (the current turn is suggested).
-3. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
-4. The end screen shows a JSON array of one row per player, ready to POST.
+1. Choose 2–8 players. Games with 3 or more players are always Commander: enter each name, search and select a commander, choose a bracket, and pick a unique seat.
+2. With 2 players, Commander is still the default, but **Format** lets you pick another (see below).
+3. On the battlefield, advance the turn counter and mark players eliminated (the current turn is suggested).
+4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
+5. The end screen shows a JSON array of one row per player, ready to POST.
+
+### Formats
+
+| Format | Group | What's recorded per player |
+| --- | --- | --- |
+| Commander (default) | | Commander (Scryfall search, colors from its color identity), bracket |
+| Standard, Pioneer, Modern, Legacy, Vintage, Pauper | Constructed | Deck theme, deck colors |
+| Dandân | Constructed | Nothing extra: both players share the mono-blue "Forgetful Fish" deck |
+| Pai Gow | Limited | Set name (shared by the game) |
+| Booster, Sealed | Limited | Set name (shared, suggestions from Scryfall's set list), deck colors |
+| Cube | Limited | Cube name (shared), deck colors |
 
 Each row looks like:
 
@@ -33,7 +45,9 @@ Each row looks like:
 {
   "match_id": "2026_09_30_01",
   "player_name": "Chandra",
+  "format": "Commander",
   "commander_name": "Krenko, Mob Boss",
+  "set_or_theme": "",
   "color_identity": "R",
   "bracket": "3",
   "turn_order": 1,
@@ -44,6 +58,10 @@ Each row looks like:
 }
 ```
 
+- `format` is the format name. Rows saved before formats existed have no value here and are shown as Commander.
+- `commander_name` and `bracket` are only filled in for Commander.
+- `set_or_theme` is the deck theme (Constructed), `Forgetful Fish` (Dandân), or the set or cube name (Limited).
+
 ## Google Apps Script
 
 The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint.
@@ -52,10 +70,10 @@ Replace that constant if you deploy your own script. The app still works without
 
 ### Setting up the script
 
-The backend is in [`Code.gs`](Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
+The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
 
 1. Open your Google Sheet and go to **Extensions > Apps Script**.
-2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 must be the column headers (`match_id`, `player_name`, ... `draw`); an empty sheet gets them automatically.
+2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 holds the column headers (`match_id`, `player_name`, ... `draw`). An empty sheet gets them automatically, and any missing column (such as `format` or `set_or_theme` on an older sheet) is added to the end of row 1 the next time a game is saved.
 3. Go to **Deploy > Manage deployments**, click the pencil icon on your existing deployment, choose **Version: New version**, and click **Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.
 
 Saving code in the editor does not update the live web app. You must deploy a new version each time. Editing the existing deployment keeps the same `/exec` URL, so `index.html` doesn't need to change.
