@@ -891,6 +891,84 @@
       margin-bottom: 16px;
     }
 
+    .format-filter {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .format-filter summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+
+    .format-filter summary::-webkit-details-marker { display: none; }
+    .format-filter summary::after { content: "▾"; color: var(--muted); }
+    .format-filter[open] summary { border-color: var(--gold); }
+    .format-filter-label { color: var(--muted); }
+
+    .format-filter-menu {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      left: 0;
+      width: min(260px, 100%);
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #11151f;
+      box-shadow: var(--shadow);
+    }
+
+    .format-filter-group {
+      margin: 8px 6px 2px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .format-filter-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      padding: 7px 6px;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.92rem;
+      cursor: pointer;
+    }
+
+    .format-filter-option:hover { background: var(--panel-2); }
+
+    .format-filter-option input {
+      width: 18px;
+      min-height: 18px;
+      height: 18px;
+      margin: 0;
+      padding: 0;
+      accent-color: var(--gold);
+    }
+
+    .format-filter-all {
+      border-bottom: 1px solid var(--border);
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 2px;
+      font-weight: 600;
+    }
+
     @media (min-width: 480px) {
       .game-header {
         grid-template-columns: 1fr 1.15fr 1fr;
@@ -1069,6 +1147,11 @@
 
       <div class="panel">
         <h2>Past Games</h2>
+
+        <details class="format-filter" id="formatFilter">
+          <summary><span class="format-filter-label">Formats:</span> <span id="formatFilterSummary">Commander</span></summary>
+          <div class="format-filter-menu" id="formatFilterMenu"></div>
+        </details>
 
         <div class="history-stats-bar">
           <div class="history-stat">
@@ -2312,18 +2395,89 @@
       if (link) showCardPreview(link.dataset.card);
     });
 
-    // Past Games only lists Commander games for now. Set to false to show every format again (each
-    // card then gets a format tag). Game numbering always uses the full history.
-    const HISTORY_COMMANDER_ONLY = true;
+    // Past Games shows only the checked formats (Commander by default). Game numbering always uses
+    // the full history.
+    const historyFormats = new Set(["Commander"]);
+    const formatFilter = document.getElementById("formatFilter");
+    const formatFilterMenu = document.getElementById("formatFilterMenu");
 
-    function visibleHistoryRows() {
-      return HISTORY_COMMANDER_ONLY
-        ? cachedHistoryRows.filter((row) => getFormat(row.format).deck === "commander")
-        : cachedHistoryRows;
+    function commanderOnlyHistory() {
+      return historyFormats.size === 1 && historyFormats.has("Commander");
     }
 
+    function visibleHistoryRows() {
+      return cachedHistoryRows.filter((row) => historyFormats.has(getFormat(row.format).name));
+    }
+
+    function renderFormatFilter() {
+      let lastGroup = null;
+      const options = FORMATS.map((f) => {
+        const heading = f.group && f.group !== lastGroup
+          ? `<div class="format-filter-group">${escapeHtml(f.group)}</div>`
+          : "";
+        lastGroup = f.group;
+        return `${heading}
+          <label class="format-filter-option">
+            <input type="checkbox" data-format="${escapeHtml(f.name)}" ${historyFormats.has(f.name) ? "checked" : ""} />
+            ${escapeHtml(f.name)}
+          </label>`;
+      }).join("");
+
+      formatFilterMenu.innerHTML = `
+        <label class="format-filter-option format-filter-all">
+          <input type="checkbox" id="formatFilterAll" />
+          Select all
+        </label>
+        ${options}`;
+      updateFormatFilterSummary();
+    }
+
+    function updateFormatFilterSummary() {
+      const all = document.getElementById("formatFilterAll");
+      all.checked = historyFormats.size === FORMATS.length;
+      all.indeterminate = historyFormats.size > 0 && historyFormats.size < FORMATS.length;
+
+      const chosen = FORMATS.filter((f) => historyFormats.has(f.name)).map((f) => f.name);
+      document.getElementById("formatFilterSummary").textContent =
+        chosen.length === FORMATS.length ? "All"
+          : chosen.length === 0 ? "None"
+          : chosen.length <= 2 ? chosen.join(", ")
+          : `${chosen.length} selected`;
+    }
+
+    function refreshHistoryView() {
+      renderHistoryStats(visibleHistoryRows());
+      renderHistoryList(visibleHistoryRows());
+    }
+
+    formatFilterMenu.addEventListener("change", (event) => {
+      const box = event.target;
+      if (box.id === "formatFilterAll") {
+        historyFormats.clear();
+        if (box.checked) FORMATS.forEach((f) => historyFormats.add(f.name));
+        formatFilterMenu.querySelectorAll("input[data-format]").forEach((input) => {
+          input.checked = box.checked;
+        });
+      } else if (box.dataset.format) {
+        if (box.checked) historyFormats.add(box.dataset.format);
+        else historyFormats.delete(box.dataset.format);
+      }
+      updateFormatFilterSummary();
+      refreshHistoryView();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (formatFilter.open && !formatFilter.contains(event.target)) formatFilter.open = false;
+    });
+
     function renderHistoryStats(rows) {
-      if (!rows.length) return;
+      if (!rows.length) {
+        ["histTotalGames", "histTotalPlayers", "histTotalCommanders"].forEach((id) => {
+          document.getElementById(id).textContent = "0";
+        });
+        document.getElementById("histAvgTurns").textContent = "—";
+        return;
+      }
 
       const uniqueGames = groupGames(rows).length;
       const uniquePlayers = new Set(
@@ -2364,6 +2518,12 @@
       const historyList = document.getElementById("historyList");
       const filterValue = document.getElementById("historyPlayerFilter")
         .value.trim().toLowerCase();
+
+      if (!rows.length && cachedHistoryRows.length) {
+        historyList.innerHTML = `
+          <div class="history-empty">No games in the selected formats.</div>`;
+        return;
+      }
 
       if (!rows.length) {
         historyList.innerHTML = `
@@ -2465,7 +2625,7 @@
           <div class="history-game-card">
             <div class="history-game-header">
               <div class="history-game-title">
-                ${HISTORY_COMMANDER_ONLY
+                ${commanderOnlyHistory()
                   ? ""
                   : `<span class="history-format-tag">${escapeHtml(formatSummary(format, setName))}</span>`}
                 <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
@@ -2479,6 +2639,7 @@
 
     renderFormatField();
     renderSetupForm(playerCount);
+    renderFormatFilter();
     loadHistory();
   </script>
 </body>
