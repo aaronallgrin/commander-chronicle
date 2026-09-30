@@ -52,7 +52,7 @@ Replace that constant if you deploy your own script. The app still works without
 
 ### Setting up the script
 
-The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
+The backend is in [`Code.gs`](Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
 
 1. Open your Google Sheet and go to **Extensions > Apps Script**.
 2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 must be the column headers (`match_id`, `player_name`, ... `draw`); an empty sheet gets them automatically.
