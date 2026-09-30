@@ -72,6 +72,8 @@ Replace that constant if you deploy your own script.
 
 The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
 
+Match IDs are the date followed by that day's game number (`2026_09_30_01`, `2026_09_30_02`, ...) and are never reused. The app suggests the next number from the sheet's history, but `doPost` has the final say: if the suggested ID is already taken (for example by a game just recorded on another device), it saves the game under the next free number and the app shows that ID. Sending the same game twice only saves it once. Any duplicate IDs already in the sheet are renumbered automatically on the next save or history load, or you can run `fixDuplicateGameIds` from the Apps Script editor.
+
 1. Open your Google Sheet and go to **Extensions > Apps Script**.
 2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 holds the column headers (`match_id`, `player_name`, ... `draw`). An empty sheet gets them automatically, and any missing column (such as `format` or `set_or_theme` on an older sheet) is added to the end of row 1 the next time a game is saved.
 3. Go to **Deploy > Manage deployments**, click the pencil icon on your existing deployment, choose **Version: New version**, and click **Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.

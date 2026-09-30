@@ -2060,6 +2060,18 @@
       document.getElementById("retrySave").hidden = true;
     }
 
+    function useFinalMatchId(savedGame, matchId) {
+      savedGame.match_id = matchId;
+      savedGame.rows.forEach((row) => (row.match_id = matchId));
+
+      const match = /^(.*)_(\d+)$/.exec(matchId);
+      if (match) {
+        const storageKey = `commander-game-count-${match[1]}`;
+        const counted = Number(localStorage.getItem(storageKey) || 0);
+        localStorage.setItem(storageKey, String(Math.max(counted, Number(match[2]))));
+      }
+    }
+
     async function saveGameRows() {
       const savingGame = game;
       const retry = document.getElementById("retrySave");
@@ -2078,17 +2090,23 @@
       setSaveStatus("Saving game...", "var(--muted)");
 
       try {
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: {
             "Content-Type": "text/plain;charset=utf-8"
           },
           body: JSON.stringify(savingGame.rows)
         });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || "Save failed");
+
+        // The sheet has the final say on the ID: it moves the game to the next free number for the
+        // day if another device already used the suggested one.
+        if (result.match_id) useFinalMatchId(savingGame, result.match_id);
+        if (!result.already_saved) cachedHistoryRows = [...cachedHistoryRows, ...savingGame.rows];
 
         savingGame.saved = true;
-        if (isCurrent()) setSaveStatus("Game saved.", "var(--green)");
+        if (isCurrent()) setSaveStatus(`Game saved as ${savingGame.match_id}.`, "var(--green)");
         showToast("Game saved successfully.", "success");
         return true;
       } catch (error) {
