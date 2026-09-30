@@ -545,7 +545,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 6px;
-      margin: 16px 0;
+      margin-top: 10px;
     }
 
     .player-count-btn {
@@ -709,10 +709,27 @@
       box-shadow: var(--shadow);
     }
 
+    .history-game-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      min-width: 0;
+    }
+
+    .history-format-tag {
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 0.75rem;
+    }
+
     .history-game-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       margin-bottom: 10px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--border);
@@ -733,6 +750,7 @@
       color: var(--muted);
       font-size: 0.78rem;
       letter-spacing: 0.04em;
+      white-space: nowrap;
     }
 
     .history-player-row {
@@ -919,15 +937,14 @@
     <section id="setupScreen" class="screen">
       <div class="panel">
         <h2>Prepare the Table</h2>
-        <p class="hint">
-          Choose the number of players to get started. Games with 3 or more players are Commander;
-          with 2 players you can pick another format.
-        </p>
 
         <form id="setupForm" novalidate>
           <div class="field">
-            <label>How many players?</label>
-            <div class="player-count-selector">
+            <label id="players-label">Players</label>
+            <button class="choice-btn format-toggle" type="button" id="playersToggle" aria-expanded="false">
+              <span id="playersToggleLabel">4-player Commander</span> <span class="format-toggle-hint">Other</span>
+            </button>
+            <div class="player-count-selector" id="playerCountOptions" hidden>
               <button class="player-count-btn" type="button" data-count="2">2</button>
               <button class="player-count-btn" type="button" data-count="3">3</button>
               <button class="player-count-btn selected" type="button" data-count="4">4</button>
@@ -1246,6 +1263,7 @@
       currentFormat = FORMATS[0];
       submitBtn.disabled = false;
       setupError.classList.remove("visible");
+      renderPlayersToggle(false);
       renderFormatField();
       renderSetupForm(playerCount);
     }
@@ -1263,9 +1281,21 @@
         playerCount = count;
         if (count > 2) currentFormat = FORMATS[0];
         submitBtn.disabled = false;
+        renderPlayersToggle(false);
         renderFormatField();
         renderSetupForm(count);
       });
+    });
+
+    function renderPlayersToggle(open) {
+      document.getElementById("playersToggleLabel").textContent =
+        playerCount > 2 ? `${playerCount}-player Commander` : `${playerCount} players`;
+      document.getElementById("playerCountOptions").hidden = !open;
+      document.getElementById("playersToggle").setAttribute("aria-expanded", String(open));
+    }
+
+    document.getElementById("playersToggle").addEventListener("click", () => {
+      renderPlayersToggle(document.getElementById("playerCountOptions").hidden);
     });
 
     function renderFormatField() {
@@ -2279,10 +2309,12 @@
         return `
           <div class="history-game-card">
             <div class="history-game-header">
-              <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
+              <div class="history-game-title">
+                <span class="history-format-tag">${escapeHtml(formatSummary(format, setName))}</span>
+                <span class="history-match-id"><span class="history-match-label">Game ID:</span> ${escapeHtml(String(matchId))}</span>
+              </div>
               <span class="history-date">${escapeHtml(String(dateStr))}</span>
             </div>
-            <div class="history-format">${escapeHtml(formatSummary(format, setName))}</div>
             ${playerRows}
           </div>`;
       }).join("");
