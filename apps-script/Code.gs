@@ -15,6 +15,11 @@
  * Then Deploy > Manage deployments > edit (pencil) > New version > Deploy.
  * Editing Code.gs alone is not enough — a new deployment version is required.
  *
+ * Gemini needs UrlFetch. If Ask returns a script.external_request permission error,
+ * enable Project Settings > Show "appsscript.json" and include the oauthScopes from
+ * apps-script/appsscript.json in this repo, then run authorizeUrlFetch() once from the
+ * editor (Run) and approve “Connect to an external service”. Redeploy after that.
+ *
  * Match IDs look like 2026_09_30_01 (date, then that day's game number) and are never reused:
  * the app suggests one, and doPost moves the game to the next free number for that date if the
  * suggestion is already taken (for example by a game recorded on another device).
@@ -22,6 +27,11 @@
 
 const SHEET_NAME = "Games";
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
+
+// Run once from the Apps Script editor (Run ▶) to approve UrlFetch / Gemini access.
+function authorizeUrlFetch() {
+  UrlFetchApp.fetch("https://www.google.com", { muteHttpExceptions: true });
+}
 
 const COLUMNS = [
   "match_id",

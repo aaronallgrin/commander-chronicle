@@ -91,11 +91,13 @@ Match IDs are the date followed by that day's game number (`2026_09_30_01`, `202
 
 1. Open your Google Sheet and go to **Extensions > Apps Script**.
 2. Replace the contents of `Code.gs` with the file from this repo and save. It writes to a tab named `Games`, or to the first tab if there isn't one. Row 1 holds the column headers (`match_id`, `player_name`, ... `draw`). An empty sheet gets them automatically, and any missing column (such as `format` or `set_or_theme` on an older sheet) is added to the end of row 1 the next time a game is saved.
-3. Go to **Deploy > Manage deployments**, click the pencil icon on your existing deployment, choose **Version: New version**, and click **Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.
+3. Under **Project Settings**, turn on **Show "appsscript.json" manifest file in editor** and make sure `oauthScopes` includes `https://www.googleapis.com/auth/script.external_request` (copy from [`apps-script/appsscript.json`](apps-script/appsscript.json) if needed).
+4. In the editor, select function `authorizeUrlFetch` → **Run**, then approve access (including “Connect to an external service”). This is required for shared Gemini Ask.
+5. Go to **Deploy > Manage deployments**, click the pencil icon on your existing deployment, choose **Version: New version**, and click **Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.
 
 Saving code in the editor does not update the live web app. You must deploy a new version each time. Editing the existing deployment keeps the same `/exec` URL, so `index.html` doesn't need to change.
 
-To check it, open `YOUR_EXEC_URL?action=history` in a browser. You should see JSON starting with `{"success":true`.
+To check it, open `YOUR_EXEC_URL?action=history` in a browser. You should see JSON starting with `{"success":true`. For Gemini, `YOUR_EXEC_URL?action=ask&question=test` should return an answer once `GEMINI_API_KEY` is set and UrlFetch is authorized.
 
 ## Hosting on GitHub Pages
 
