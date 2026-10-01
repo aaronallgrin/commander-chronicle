@@ -35,7 +35,7 @@ Past Games shows only Commander games by default. **Refresh** sits under the hea
 Gemini setup (either works):
 
 1. **This device only (easiest):** when Ask needs Gemini, a key box appears under the question. Paste a free key from [Google AI Studio](https://aistudio.google.com/apikey) and tap **Save**. It stays in that phone’s browser only.
-2. **Shared for everyone:** paste the latest [`apps-script/Code.gs`](apps-script/Code.gs), set Script property `GEMINI_API_KEY`, then **Deploy → Manage deployments → edit (pencil) → New version → Deploy**. Editing the script without a new deployment version will not update the live web app.
+2. **Shared for everyone:** paste the latest [`apps-script/Code.gs`](apps-script/Code.gs) (and keep the `oauthScopes` from [`apps-script/appsscript.json`](apps-script/appsscript.json) under Project Settings → Show `appsscript.json`). Set Script property `GEMINI_API_KEY`. Run `authorizeUrlFetch` once from the editor and approve external requests. Then **Deploy → Manage deployments → edit (pencil) → New version → Deploy**. Editing the script without a new deployment version will not update the live web app.
 
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
