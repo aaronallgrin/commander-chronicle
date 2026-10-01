@@ -6,7 +6,12 @@
  * web app (Deploy > Manage deployments > edit > New version).
  *
  *   doPost: saves one row per player sent by the app, and decides the game's final match ID.
+ *            Also answers Ask questions when the body is `{ action: "ask", question }` and
+ *            GEMINI_API_KEY is set in Script properties.
  *   doGet ?action=history: returns every saved row for the Past Games screen.
+ *
+ * For Gemini Ask answers, set Project Settings > Script properties:
+ *   GEMINI_API_KEY = your free key from https://aistudio.google.com/apikey
  *
  * Match IDs look like 2026_09_30_01 (date, then that day's game number) and are never reused:
  * the app suggests one, and doPost moves the game to the next free number for that date if the
@@ -14,6 +19,7 @@
  */
 
 const SHEET_NAME = "Games";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 const COLUMNS = [
   "match_id",
@@ -29,6 +35,15 @@ const COLUMNS = [
   "win_turn",
   "draw"
 ];
+
+const BRACKET_NAMES = {
+  "p": "Precon",
+  "1": "Bracket 1",
+  "2": "Bracket 2",
+  "3": "Bracket 3",
+  "4": "Bracket 4",
+  "5": "cEDH"
+};
 
 function getSheet_() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -166,12 +181,187 @@ function gameFingerprint_(rows) {
     .join("\n");
 }
 
+function truthy_(value) {
+  return value == 1 || value === "1" || value === true || value === "TRUE";
+}
+
+function matchIdDate_(matchId) {
+  const parts = String(matchId || "").split("_");
+  return parts.length >= 3 ? parts[0] + "/" + parts[1] + "/" + parts[2] : String(matchId || "");
+}
+
+function formatName_(value) {
+  const name = String(value || "").trim();
+  return name || "Commander";
+}
+
+function buildAskContext_(rows) {
+  const games = [];
+  rows.forEach((row) => {
+    const last = games[games.length - 1];
+    if (last && last.match_id === row.match_id) last.players.push(row);
+    else games.push({ match_id: row.match_id, players: [row] });
+  });
+
+  const leaderboard = {};
+  games.forEach((game) => {
+    const seen = {};
+    game.players.forEach((row) => {
+      const name = String(row.player_name || "").trim() || "Unknown";
+      const key = name.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      if (!leaderboard[key]) leaderboard[key] = { name: name, games: 0, wins: 0, draws: 0, losses: 0 };
+      const entry = leaderboard[key];
+      entry.games += 1;
+      if (truthy_(row.draw)) entry.draws += 1;
+      else if (truthy_(row.win)) entry.wins += 1;
+      else entry.losses += 1;
+    });
+  });
+
+  const commanders = {};
+  rows.forEach((row) => {
+    if (formatName_(row.format) !== "Commander") return;
+    const commander = String(row.commander_name || "").trim();
+    if (!commander) return;
+    const key = commander.toLowerCase();
+    if (!commanders[key]) commanders[key] = { name: commander, games: 0, wins: 0 };
+    commanders[key].games += 1;
+    if (truthy_(row.win) && !truthy_(row.draw)) commanders[key].wins += 1;
+  });
+
+  const recent = games.slice(-60).map((game) => ({
+    match_id: game.match_id,
+    date: matchIdDate_(game.match_id),
+    format: formatName_(game.players[0].format),
+    set_or_theme: String(game.players[0].set_or_theme || ""),
+    players: game.players.map((p) => ({
+      name: String(p.player_name || "").trim() || "Unknown",
+      commander: String(p.commander_name || ""),
+      colors: String(p.color_identity || ""),
+      bracket: BRACKET_NAMES[String(p.bracket)] || String(p.bracket || ""),
+      seat: p.turn_order,
+      eliminated_turn: p.eliminated_turn,
+      win: truthy_(p.win) && !truthy_(p.draw),
+      draw: truthy_(p.draw),
+      win_turn: p.win_turn
+    }))
+  }));
+
+  const leaderboardList = Object.keys(leaderboard).map((key) => leaderboard[key])
+    .sort(function (a, b) {
+      return b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name);
+    })
+    .slice(0, 12);
+
+  const commanderList = Object.keys(commanders).map((key) => commanders[key])
+    .sort(function (a, b) {
+      return b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name);
+    })
+    .slice(0, 12);
+
+  return {
+    totals: {
+      games: games.length,
+      players: Object.keys(leaderboard).length,
+      rows: rows.length
+    },
+    leaderboard: leaderboardList,
+    commanders: commanderList,
+    recent_games: recent
+  };
+}
+
+function askSystemPrompt_() {
+  return [
+    "You are the stats assistant for Commander Chronicle, a private Magic: The Gathering game log.",
+    "Answer using the provided game data as the source of truth for this group's results.",
+    "You may use Scryfall-level and general Magic knowledge for card/strategy context, but never invent games, wins, or players that are not in the data.",
+    "If the data is incomplete for the question, say what is missing.",
+    "Keep answers concise and concrete. Prefer short paragraphs or bullet-like lines.",
+    "cEDH means Commander bracket 5 in this app."
+  ].join(" ");
+}
+
+function handleAsk_(body) {
+  const question = String(body.question || "").trim();
+  if (!question) {
+    return json_({ success: false, error: "Empty question." });
+  }
+
+  const key = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+  if (!key) {
+    return json_({
+      success: false,
+      needs_key: true,
+      error: "Set GEMINI_API_KEY in Apps Script project properties."
+    });
+  }
+
+  const sheet = getSheet_();
+  const headers = getHeaders_(sheet);
+  const records = sheet.getLastRow() < 2 ? [] : readRecords_(sheet, headers);
+  const rows = records.map((record) => record.item);
+  const context = buildAskContext_(rows);
+
+  const payload = {
+    contents: [{
+      role: "user",
+      parts: [{
+        text: askSystemPrompt_() +
+          "\n\nGAME DATA JSON:\n" + JSON.stringify(context) +
+          "\n\nQUESTION:\n" + question
+      }]
+    }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 700 }
+  };
+
+  const response = UrlFetchApp.fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+      GEMINI_MODEL +
+      ":generateContent?key=" +
+      encodeURIComponent(key),
+    {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    }
+  );
+
+  const code = response.getResponseCode();
+  const data = JSON.parse(response.getContentText() || "{}");
+  if (code < 200 || code >= 300) {
+    const message = data.error && data.error.message
+      ? data.error.message
+      : ("Gemini HTTP " + code);
+    return json_({ success: false, error: message });
+  }
+
+  const parts = ((data.candidates || [])[0] || {}).content
+    ? (((data.candidates || [])[0] || {}).content.parts || [])
+    : [];
+  const answer = parts.map(function (part) { return part.text || ""; }).join("").trim();
+  if (!answer) {
+    return json_({ success: false, error: "Gemini returned an empty answer." });
+  }
+
+  return json_({ success: true, answer: answer });
+}
+
 function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
   try {
-    const rows = JSON.parse(e.postData.contents);
+    const body = JSON.parse(e.postData.contents);
+
+    if (body && !Array.isArray(body) && body.action === "ask") {
+      return handleAsk_(body);
+    }
+
+    const rows = body;
     if (!Array.isArray(rows) || !rows.length) {
       return json_({ success: false, error: "Expected a non-empty array of rows." });
     }
