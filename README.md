@@ -30,7 +30,12 @@ npm run preview
 
 Past Games shows only Commander games by default. **Refresh** sits under the heading so you can reload the sheet without scrolling. The **Formats** dropdown has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
 
-The player filter matches the start of a name or of any word in it, so "drew" finds Drew but not Andrew.
+**Ask about your games** replaces the old player-name filter. Common questions (who wins the most, a player's win history, most recent game, best commanders, win rates, average win turn, including cEDH / bracket / format scopes) are answered from the sheet with a small stats script. Anything else falls back to Google's free **Gemini** model, using your game log plus general Magic / Scryfall knowledge.
+
+Gemini setup (either works):
+
+1. **Shared for everyone:** after pasting the latest [`apps-script/Code.gs`](apps-script/Code.gs) and redeploying the web app, set Script property `GEMINI_API_KEY` to a free key from [Google AI Studio](https://aistudio.google.com/apikey).
+2. **This device only:** tap **Add a free API key** under the Ask box and paste the same kind of key (stored in `localStorage`).
 
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
@@ -74,7 +79,7 @@ Each row looks like:
 
 ## Google Apps Script
 
-The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint.
+The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint. Ask fallbacks that use the shared Gemini key POST `{ "action": "ask", "question": "..." }` to that same URL.
 
 Replace that constant if you deploy your own script.
 

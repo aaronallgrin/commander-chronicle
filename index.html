@@ -885,8 +885,100 @@
       color: var(--muted);
     }
 
-    .history-filter {
-      margin-bottom: 16px;
+    .history-ask {
+      margin: 4px 0 16px;
+    }
+
+    .history-ask-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .history-ask-row .primary {
+      width: auto;
+      min-width: 72px;
+      padding-inline: 18px;
+    }
+
+    .ask-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .ask-chip {
+      min-height: 34px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: normal;
+      transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+    }
+
+    .ask-chip:hover {
+      border-color: var(--gold);
+      color: var(--text);
+      background: #1a2030;
+      transform: none;
+      filter: none;
+    }
+
+    .ask-answer {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0d1017;
+      color: var(--text);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      animation: rise 180ms ease-out;
+    }
+
+    .ask-answer[hidden] { display: none !important; }
+
+    .ask-answer.loading {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .ask-answer .ask-source {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-style: italic;
+    }
+
+    .ask-setup {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .ask-setup button {
+      display: inline;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      color: var(--gold-light);
+      font-size: inherit;
+      font-weight: normal;
+      text-decoration: underline;
+    }
+
+    .ask-setup button:hover {
+      transform: none;
+      filter: none;
     }
 
     .format-filter {
@@ -1161,14 +1253,24 @@
           </div>
         </div>
 
-        <div class="history-filter field">
-          <label for="historyPlayerFilter">Filter by player name</label>
-          <input
-            id="historyPlayerFilter"
-            type="search"
-            placeholder="e.g. Aaron..."
-            autocomplete="off"
-          />
+        <div class="history-ask field">
+          <label for="historyAskInput">Ask about your games</label>
+          <div class="history-ask-row">
+            <input
+              id="historyAskInput"
+              type="search"
+              placeholder="Who wins the most cEDH?"
+              autocomplete="off"
+              enterkeyhint="search"
+            />
+            <button class="primary" type="button" id="historyAskSubmit">Ask</button>
+          </div>
+          <div class="ask-suggestions" id="askSuggestions"></div>
+          <div id="askAnswer" class="ask-answer" hidden></div>
+          <p class="ask-setup" id="askSetupHint" hidden>
+            For tougher questions, this can use Google’s free Gemini model.
+            <button type="button" id="askSetupKey">Add a free API key</button>
+          </p>
         </div>
 
         <div id="historyList"></div>
@@ -2279,8 +2381,34 @@
       loadHistory();
     });
 
-    document.getElementById("historyPlayerFilter").addEventListener("input", () => {
-      renderHistoryList(visibleHistoryRows());
+    const historyAskInput = document.getElementById("historyAskInput");
+    const historyAskSubmit = document.getElementById("historyAskSubmit");
+    const askSuggestionsEl = document.getElementById("askSuggestions");
+    const askAnswerEl = document.getElementById("askAnswer");
+    const askSetupHint = document.getElementById("askSetupHint");
+    const GEMINI_KEY_STORAGE = "commander_chronicle_gemini_key";
+    const GEMINI_MODEL = "gemini-2.5-flash";
+
+    historyAskSubmit.addEventListener("click", () => askAboutGames());
+    historyAskInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        askAboutGames();
+      }
+    });
+
+    document.getElementById("askSetupKey").addEventListener("click", () => {
+      const current = localStorage.getItem(GEMINI_KEY_STORAGE) || "";
+      const next = window.prompt(
+        "Paste a free Gemini API key from https://aistudio.google.com/apikey\n\nLeave blank to clear the saved key.",
+        current
+      );
+      if (next == null) return;
+      const trimmed = next.trim();
+      if (trimmed) localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
+      else localStorage.removeItem(GEMINI_KEY_STORAGE);
+      askSetupHint.hidden = true;
+      showToast(trimmed ? "Gemini key saved on this device." : "Gemini key cleared.", "success");
     });
 
     // quiet: refresh in the background (used for game numbering) without clearing the list or
@@ -2307,6 +2435,7 @@
 
         renderHistoryStats(visibleHistoryRows());
         renderHistoryList(visibleHistoryRows());
+        renderAskSuggestions();
       } catch (error) {
         console.error("History load failed:", error);
         if (quiet) return;
@@ -2426,6 +2555,7 @@
     function refreshHistoryView() {
       renderHistoryStats(visibleHistoryRows());
       renderHistoryList(visibleHistoryRows());
+      renderAskSuggestions();
     }
 
     formatFilterMenu.addEventListener("change", (event) => {
@@ -2468,6 +2598,465 @@
     function playerNameMatches(name, query) {
       const lower = String(name || "").toLowerCase().trim();
       return lower.startsWith(query) || lower.split(/[^\p{L}\p{N}]+/u).some((word) => word.startsWith(query));
+    }
+
+    function isWinRow(row) {
+      return row.win == 1 || row.win === "1" || row.win === "TRUE";
+    }
+
+    function isDrawRow(row) {
+      return row.draw == 1 || row.draw === "1" || row.draw === "TRUE";
+    }
+
+    function isTrueWin(row) {
+      return isWinRow(row) && !isDrawRow(row);
+    }
+
+    function displayPlayerName(name) {
+      return String(name || "").trim() || "Unknown";
+    }
+
+    function normalizeAskText(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/[’']/g, "'")
+        .replace(/[^a-z0-9'\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function matchIdDate(matchId) {
+      const parts = String(matchId || "").split("_");
+      return parts.length >= 3 ? `${parts[0]}/${parts[1]}/${parts[2]}` : String(matchId || "");
+    }
+
+    function uniquePlayerNames(rows) {
+      const byKey = new Map();
+      rows.forEach((row) => {
+        const name = displayPlayerName(row.player_name);
+        const key = name.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, name);
+      });
+      return [...byKey.values()];
+    }
+
+    function findMentionedPlayer(question, rows) {
+      const q = normalizeAskText(question);
+      const names = uniquePlayerNames(rows)
+        .map((name) => ({ name, key: name.toLowerCase() }))
+        .sort((a, b) => b.key.length - a.key.length);
+      return names.find(({ key }) => {
+        if (q.includes(key)) return true;
+        const first = key.split(/\s+/)[0];
+        return first.length >= 3 && new RegExp(`(?:^|\\s)${first}(?:\\s|$|'s|s\\b)`, "i").test(q);
+      })?.name || null;
+    }
+
+    function questionFormatFilter(question) {
+      const q = normalizeAskText(question);
+      if (/\bcedh\b|\bc edh\b|\bcompetitive\b|\bbracket\s*5\b/.test(q)) {
+        return (row) => getFormat(row.format).deck === "commander" && String(row.bracket) === "5";
+      }
+      if (/\bprecon\b|\bbracket\s*p\b/.test(q)) {
+        return (row) => getFormat(row.format).deck === "commander" && String(row.bracket).toLowerCase() === "p";
+      }
+      const bracket = q.match(/\bbracket\s*([1-4])\b/);
+      if (bracket) {
+        return (row) => getFormat(row.format).deck === "commander" && String(row.bracket) === bracket[1];
+      }
+      for (const format of FORMATS) {
+        const key = normalizeAskText(format.name);
+        if (key && new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(q)) {
+          return (row) => getFormat(row.format).name === format.name;
+        }
+      }
+      return null;
+    }
+
+    function rowsForAsk(question) {
+      const filter = questionFormatFilter(question);
+      return filter ? cachedHistoryRows.filter(filter) : cachedHistoryRows.slice();
+    }
+
+    function playerGameStats(rows) {
+      const games = groupGames(rows);
+      const stats = new Map();
+
+      function ensure(name) {
+        const key = name.toLowerCase();
+        if (!stats.has(key)) {
+          stats.set(key, { name, games: 0, wins: 0, draws: 0, losses: 0 });
+        }
+        return stats.get(key);
+      }
+
+      games.forEach(([, players]) => {
+        const seen = new Set();
+        players.forEach((row) => {
+          const name = displayPlayerName(row.player_name);
+          const key = name.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          const entry = ensure(name);
+          entry.games += 1;
+          if (isDrawRow(row)) entry.draws += 1;
+          else if (isTrueWin(row)) entry.wins += 1;
+          else entry.losses += 1;
+        });
+      });
+
+      return [...stats.values()].sort((a, b) =>
+        b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name)
+      );
+    }
+
+    function commanderWinStats(rows) {
+      const byKey = new Map();
+      rows.forEach((row) => {
+        if (getFormat(row.format).deck !== "commander") return;
+        const commander = String(row.commander_name || "").trim();
+        if (!commander) return;
+        const key = commander.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, { name: commander, games: 0, wins: 0 });
+        const entry = byKey.get(key);
+        entry.games += 1;
+        if (isTrueWin(row)) entry.wins += 1;
+      });
+      return [...byKey.values()].sort((a, b) =>
+        b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name)
+      );
+    }
+
+    function formatGameSummary([matchId, players]) {
+      const format = getFormat(players[0].format);
+      const setName = format.set ? String(players[0].set_or_theme || "") : "";
+      const seat = (p) => turnNumber(p.turn_order) || Infinity;
+      const sorted = [...players].sort((a, b) => (seat(a) - seat(b)) || 0);
+      const lines = sorted.map((p) => {
+        const deck = deckLabel(format, {
+          commander: p.commander_name,
+          set_or_theme: p.set_or_theme
+        });
+        const bracket = format.deck === "commander"
+          ? (BRACKET_NAMES[String(p.bracket)] || p.bracket || "")
+          : "";
+        let result = "Playing";
+        if (isDrawRow(p)) result = `Draw${turnNumber(p.win_turn) ? ` T${p.win_turn}` : ""}`;
+        else if (isTrueWin(p)) result = `Won${turnNumber(p.win_turn) ? ` T${p.win_turn}` : ""}`;
+        else if (turnNumber(p.eliminated_turn)) result = `Out T${p.eliminated_turn}`;
+        else if (players.some((row) => isWinRow(row) || isDrawRow(row))) result = "Out";
+        const bits = [displayPlayerName(p.player_name)];
+        if (deck) bits.push(deck);
+        if (bracket) bits.push(`(${bracket})`);
+        bits.push("— " + result);
+        return "• " + bits.join(" ");
+      });
+      return [
+        `${formatSummary(format, setName)} · ${matchIdDate(matchId)} · ${matchId}`,
+        ...lines
+      ].join("\n");
+    }
+
+    function scopeLabel(question, rows) {
+      const q = normalizeAskText(question);
+      if (/\bcedh\b|\bc edh\b|\bcompetitive\b|\bbracket\s*5\b/.test(q)) return "in cEDH games";
+      if (/\bprecon\b/.test(q)) return "in Precon games";
+      const bracket = q.match(/\bbracket\s*([1-4])\b/);
+      if (bracket) return `in Bracket ${bracket[1]} games`;
+      for (const format of FORMATS) {
+        if (q.includes(normalizeAskText(format.name))) return `in ${format.name}`;
+      }
+      if (!rows.length) return "in the saved history";
+      return questionFormatFilter(question) ? "in the matching games" : "across all saved games";
+    }
+
+    function answerDeterministic(question, rows) {
+      const q = normalizeAskText(question);
+      if (!q) return null;
+      if (!cachedHistoryRows.length) {
+        return { text: "No games are loaded yet. Save a game or tap Refresh, then ask again." };
+      }
+      if (!rows.length) {
+        return { text: `No matching games found ${scopeLabel(question, rows)}.` };
+      }
+
+      const player = findMentionedPlayer(question, cachedHistoryRows);
+      const games = groupGames(rows);
+      const recent = [...games].reverse();
+
+      if (/\b(most|latest|last|recent)\b.*\bgames?\b|\bgames?\b.*\b(most|latest|last|recent)\b|\blast\s+match\b|\blatest\s+match\b/.test(q)
+          || q === "most recent game" || q === "latest game" || q === "last game") {
+        if (player) {
+          const hit = recent.find(([, players]) =>
+            players.some((row) => row.player_name.toLowerCase().trim() === player.toLowerCase())
+          );
+          if (!hit) return { text: `No games found for ${player}.` };
+          return { text: `Most recent game for ${player}:\n\n${formatGameSummary(hit)}` };
+        }
+        return { text: `Most recent game:\n\n${formatGameSummary(recent[0])}` };
+      }
+
+      if (/\b(best|top|most winning|winningest)\b.*\bcommander|\bcommander\b.*\b(best|top|wins?|winning)\b/.test(q)) {
+        let pool = rows;
+        if (player) {
+          pool = rows.filter((row) => row.player_name.toLowerCase().trim() === player.toLowerCase());
+        }
+        const commanders = commanderWinStats(pool).filter((c) => c.wins > 0);
+        if (!commanders.length) {
+          return {
+            text: player
+              ? `${player} has no recorded commander wins ${scopeLabel(question, pool)}.`
+              : `No commander wins recorded ${scopeLabel(question, pool)}.`
+          };
+        }
+        const top = commanders.slice(0, 5).map((c, i) =>
+          `${i + 1}. ${c.name} — ${c.wins} win${c.wins === 1 ? "" : "s"} in ${c.games} game${c.games === 1 ? "" : "s"}`
+        );
+        const heading = player
+          ? `${player}'s best commanders ${scopeLabel(question, pool)}:`
+          : `Best winning commanders ${scopeLabel(question, pool)}:`;
+        return { text: `${heading}\n${top.join("\n")}` };
+      }
+
+      if (/\bwin rates?\b|\bwinning percentage\b|\brecord\b/.test(q) && (player || /\bwin rates?\b/.test(q))) {
+        const stats = playerGameStats(rows);
+        if (player) {
+          const entry = stats.find((s) => s.name.toLowerCase() === player.toLowerCase());
+          if (!entry) return { text: `No games found for ${player} ${scopeLabel(question, rows)}.` };
+          const rate = entry.games ? Math.round((entry.wins / entry.games) * 100) : 0;
+          return {
+            text: `${entry.name} ${scopeLabel(question, rows)}: ${entry.wins}–${entry.losses}–${entry.draws} (W-L-D) in ${entry.games} games · ${rate}% win rate.`
+          };
+        }
+        const lines = stats.slice(0, 8).map((s, i) => {
+          const rate = s.games ? Math.round((s.wins / s.games) * 100) : 0;
+          return `${i + 1}. ${s.name} — ${s.wins}–${s.losses}–${s.draws} · ${rate}% (${s.games} games)`;
+        });
+        return { text: `Win rates ${scopeLabel(question, rows)}:\n${lines.join("\n")}` };
+      }
+
+      if (player && (/\bwin history\b|\bwins?\b|\bhow many\b|\bvictories\b|\brecord\b/.test(q) || /'s\s+wins?\b/.test(q))) {
+        const entry = playerGameStats(rows).find((s) => s.name.toLowerCase() === player.toLowerCase());
+        if (!entry) return { text: `No games found for ${player} ${scopeLabel(question, rows)}.` };
+        const wonGames = recent.filter(([, players]) =>
+          players.some((row) =>
+            row.player_name.toLowerCase().trim() === player.toLowerCase() && isTrueWin(row)
+          )
+        );
+        const rate = entry.games ? Math.round((entry.wins / entry.games) * 100) : 0;
+        const recentWins = wonGames.slice(0, 5).map((game) => formatGameSummary(game));
+        const lines = [
+          `${entry.name}'s record ${scopeLabel(question, rows)}: ${entry.wins} win${entry.wins === 1 ? "" : "s"}, ${entry.losses} loss${entry.losses === 1 ? "" : "es"}, ${entry.draws} draw${entry.draws === 1 ? "" : "s"} in ${entry.games} games (${rate}%).`
+        ];
+        if (recentWins.length) {
+          lines.push("", "Recent wins:", ...recentWins.map((block) => "\n" + block));
+        }
+        return { text: lines.join("\n") };
+      }
+
+      if (/\bwho wins?\b|\bmost wins?\b|\bwin leader\b|\bwinningest\b|\bmost victories\b|\bwho has the most\b/.test(q)) {
+        const stats = playerGameStats(rows).filter((s) => s.wins > 0);
+        if (!stats.length) return { text: `No wins recorded ${scopeLabel(question, rows)}.` };
+        const best = stats[0].wins;
+        const leaders = stats.filter((s) => s.wins === best);
+        const leaderText = leaders.length === 1
+          ? `${leaders[0].name} leads with ${best} win${best === 1 ? "" : "s"}`
+          : `${leaders.map((s) => s.name).join(", ")} are tied with ${best} wins each`;
+        const board = stats.slice(0, 5).map((s, i) =>
+          `${i + 1}. ${s.name} — ${s.wins} win${s.wins === 1 ? "" : "s"} in ${s.games} game${s.games === 1 ? "" : "s"}`
+        );
+        return { text: `${leaderText} ${scopeLabel(question, rows)}.\n\n${board.join("\n")}` };
+      }
+
+      if (/\bavg(erage)?\b.*\bwin turns?\b|\bwin turns?\b.*\bavg(erage)?\b|\baverage win turn\b/.test(q)) {
+        const winTurns = games.map(([, players]) => gameWinTurn(players)).filter((turn) => turn != null);
+        if (!winTurns.length) return { text: `No win turns recorded ${scopeLabel(question, rows)}.` };
+        const avg = Math.round(winTurns.reduce((a, b) => a + b, 0) / winTurns.length);
+        return { text: `Average win turn ${scopeLabel(question, rows)}: ${avg} (from ${winTurns.length} decided games).` };
+      }
+
+      return null;
+    }
+
+    function buildAskContext(rows) {
+      const games = groupGames(rows);
+      const recent = games.slice(-60).map(([matchId, players]) => {
+        const format = getFormat(players[0].format);
+        return {
+          match_id: matchId,
+          date: matchIdDate(matchId),
+          format: format.name,
+          set_or_theme: format.set ? String(players[0].set_or_theme || "") : "",
+          players: players.map((p) => ({
+            name: displayPlayerName(p.player_name),
+            commander: String(p.commander_name || ""),
+            colors: String(p.color_identity || ""),
+            bracket: format.deck === "commander" ? (BRACKET_NAMES[String(p.bracket)] || String(p.bracket || "")) : "",
+            seat: turnNumber(p.turn_order),
+            eliminated_turn: turnNumber(p.eliminated_turn),
+            win: isTrueWin(p),
+            draw: isDrawRow(p),
+            win_turn: turnNumber(p.win_turn)
+          }))
+        };
+      });
+
+      return {
+        totals: {
+          games: games.length,
+          players: uniquePlayerNames(rows).length,
+          rows: rows.length
+        },
+        leaderboard: playerGameStats(rows).slice(0, 12),
+        commanders: commanderWinStats(rows).slice(0, 12),
+        recent_games: recent
+      };
+    }
+
+    function askSystemPrompt() {
+      return [
+        "You are the stats assistant for Commander Chronicle, a private Magic: The Gathering game log.",
+        "Answer using the provided game data as the source of truth for this group's results.",
+        "You may use Scryfall-level and general Magic knowledge for card/strategy context, but never invent games, wins, or players that are not in the data.",
+        "If the data is incomplete for the question, say what is missing.",
+        "Keep answers concise and concrete. Prefer short paragraphs or bullet-like lines.",
+        "cEDH means Commander bracket 5 in this app."
+      ].join(" ");
+    }
+
+    async function askGeminiViaAppsScript(question) {
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "ask", question })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (data.needs_key) return { needsKey: true };
+      if (!data.success) throw new Error(data.error || "Ask failed");
+      return { text: String(data.answer || "").trim(), source: "Gemini" };
+    }
+
+    async function askGeminiDirect(question, rows) {
+      const key = localStorage.getItem(GEMINI_KEY_STORAGE);
+      if (!key) return { needsKey: true };
+
+      const context = buildAskContext(rows.length ? rows : cachedHistoryRows);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [{
+                text: `${askSystemPrompt()}\n\nGAME DATA JSON:\n${JSON.stringify(context)}\n\nQUESTION:\n${question}`
+              }]
+            }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 700 }
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = data.error?.message || `Gemini HTTP ${response.status}`;
+        throw new Error(message);
+      }
+      const text = (data.candidates || [])
+        .flatMap((c) => c.content?.parts || [])
+        .map((p) => p.text || "")
+        .join("")
+        .trim();
+      if (!text) throw new Error("Gemini returned an empty answer.");
+      return { text, source: "Gemini" };
+    }
+
+    async function askWithLlm(question, rows) {
+      try {
+        const proxied = await askGeminiViaAppsScript(question);
+        if (!proxied.needsKey) return proxied;
+      } catch (error) {
+        console.warn("Apps Script ask unavailable:", error);
+      }
+      return askGeminiDirect(question, rows);
+    }
+
+    function setAskAnswer(text, { loading = false, source = "" } = {}) {
+      askAnswerEl.hidden = false;
+      askAnswerEl.classList.toggle("loading", loading);
+      askAnswerEl.textContent = text;
+      if (source && !loading) {
+        const tag = document.createElement("span");
+        tag.className = "ask-source";
+        tag.textContent = source === "stats"
+          ? "Answered from your game log"
+          : "Answered with Gemini using your game log";
+        askAnswerEl.appendChild(tag);
+      }
+    }
+
+    function renderAskSuggestions() {
+      const stats = playerGameStats(cachedHistoryRows);
+      const topName = stats[0]?.name || uniquePlayerNames(cachedHistoryRows)[0] || "Aaron";
+      const suggestions = [
+        "Who wins the most?",
+        "Who wins the most cEDH?",
+        `${topName}'s win history`,
+        "Most recent game",
+        "Best winning commander"
+      ];
+      askSuggestionsEl.innerHTML = suggestions.map((text) =>
+        `<button class="ask-chip" type="button" data-ask="${escapeHtml(text)}">${escapeHtml(text)}</button>`
+      ).join("");
+      historyAskInput.placeholder = suggestions[1];
+    }
+
+    askSuggestionsEl.addEventListener("click", (event) => {
+      const chip = event.target.closest(".ask-chip");
+      if (!chip) return;
+      historyAskInput.value = chip.dataset.ask || chip.textContent;
+      askAboutGames();
+    });
+
+    async function askAboutGames() {
+      const question = historyAskInput.value.trim();
+      if (!question) {
+        historyAskInput.focus();
+        return;
+      }
+
+      const rows = rowsForAsk(question);
+      const deterministic = answerDeterministic(question, rows);
+      if (deterministic) {
+        askSetupHint.hidden = true;
+        setAskAnswer(deterministic.text, { source: "stats" });
+        return;
+      }
+
+      setAskAnswer("Thinking with Gemini…", { loading: true });
+      historyAskSubmit.disabled = true;
+      try {
+        const result = await askWithLlm(question, rows);
+        if (result.needsKey) {
+          askSetupHint.hidden = false;
+          setAskAnswer(
+            "That question needs the free Gemini fallback.\n\nAdd a Gemini API key on this device, or set GEMINI_API_KEY in the Apps Script project properties after updating Code.gs.\n\nMeanwhile, try a suggested question below."
+          );
+          return;
+        }
+        askSetupHint.hidden = true;
+        setAskAnswer(result.text, { source: result.source || "Gemini" });
+      } catch (error) {
+        console.error("Ask failed:", error);
+        askSetupHint.hidden = !localStorage.getItem(GEMINI_KEY_STORAGE);
+        setAskAnswer(
+          `Couldn't answer that yet (${error.message || "unknown error"}).\n\nTry one of the suggested questions, or check the Gemini key / Apps Script ask setup.`
+        );
+      } finally {
+        historyAskSubmit.disabled = false;
+      }
     }
 
     function renderHistoryStats(rows) {
@@ -2516,8 +3105,6 @@
 
     function renderHistoryList(rows) {
       const historyList = document.getElementById("historyList");
-      const filterValue = document.getElementById("historyPlayerFilter")
-        .value.trim().toLowerCase();
 
       if (!rows.length && cachedHistoryRows.length) {
         historyList.innerHTML = `
@@ -2534,25 +3121,7 @@
         return;
       }
 
-      const filteredRows = filterValue
-        ? rows.filter((r) => playerNameMatches(r.player_name, filterValue))
-        : rows;
-
-      if (!filteredRows.length) {
-        historyList.innerHTML = `
-          <div class="history-empty">No games found for "${escapeHtml(filterValue)}"</div>`;
-        return;
-      }
-
-      const gameEntries = groupGames(rows)
-        .map(([matchId, players]) => [
-          matchId,
-          filterValue
-            ? players.filter((r) => playerNameMatches(r.player_name, filterValue))
-            : players
-        ])
-        .filter(([, players]) => players.length)
-        .reverse();
+      const gameEntries = groupGames(rows).reverse();
 
       historyList.innerHTML = gameEntries.map(([matchId, players]) => {
         const parts = String(matchId).split("_");
@@ -2639,6 +3208,7 @@
     renderFormatField();
     renderSetupForm(playerCount);
     renderFormatFilter();
+    renderAskSuggestions();
     loadHistory();
     restoreActiveGame();
   </script>
