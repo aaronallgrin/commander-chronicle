@@ -2758,7 +2758,6 @@
     }
 
     function scopeLabel(question, rows) {
-      if (!rows.length) return "in the saved history";
       const q = normalizeAskText(question);
       if (/\bcedh\b|\bc edh\b|\bcompetitive\b|\bbracket\s*5\b/.test(q)) return "in cEDH games";
       if (/\bprecon\b/.test(q)) return "in Precon games";
@@ -2767,6 +2766,7 @@
       for (const format of FORMATS) {
         if (q.includes(normalizeAskText(format.name))) return `in ${format.name}`;
       }
+      if (!rows.length) return "in the saved history";
       return questionFormatFilter(question) ? "in the matching games" : "across all saved games";
     }
 
