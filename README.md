@@ -22,13 +22,13 @@ npm run preview
 
 ## How a game is recorded
 
-1. Choose 2–8 players. Games with 3 or more players are always Commander: enter each name, search and select a commander, choose a bracket, and pick a unique seat.
+1. Choose 2–8 players. Games with 3 or more players are always Commander: enter each name, search and select a commander, and choose a bracket. Sections are labelled **Turn order #1**, **#2**, and so on — fill in #1, then pass the phone clockwise (or to the other player in a 2-player game).
 2. With 2 players, Commander is still the default, but **Format** lets you pick another (see below).
 3. On the battlefield, tap **Eliminate** when a player loses and enter the turn it happened on (after the first one, the latest turn entered is suggested). There's no turn counter to keep up to date. The game in progress is kept on the device, so it survives the phone reloading the page after being locked or switching apps. **Cancel game without saving** throws it away.
 4. When one player remains, they are declared the winner. You can also declare a winner early or record a draw.
 5. The game is saved automatically (one row per player) and the end screen shows whether it worked, with a retry button if it didn't. From there, **Play Again** starts a new game with the same players, decks and seats, **New Game** opens a fresh setup, and **Back to Past Games** returns home.
 
-Past Games shows only Commander games by default. The **Formats** dropdown at the top has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
+Past Games shows only Commander games by default. **Refresh** sits under the heading so you can reload the sheet without scrolling. The **Formats** dropdown has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
 
 The player filter matches the start of a name or of any word in it, so "drew" finds Drew but not Andrew.
 

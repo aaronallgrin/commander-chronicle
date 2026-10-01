@@ -600,13 +600,29 @@
       .bracket-selector { grid-template-columns: repeat(6, 1fr); }
     }
 
-    .order-selector,
     .color-selector {
       display: grid;
       gap: 8px;
+      grid-template-columns: repeat(5, 1fr);
     }
 
-    .color-selector { grid-template-columns: repeat(5, 1fr); }
+    .pass-phone-hint {
+      margin: 4px 0 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .history-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 0 0 12px;
+    }
+
+    .history-toolbar .ghost {
+      min-height: 40px;
+      padding: 8px 14px;
+    }
 
     .color-btn img {
       width: 22px;
@@ -1029,7 +1045,7 @@
       <p class="subtitle">Record the battle. Remember the legend.</p>
     </header>
 
-    <div class="credit">Created by aaronallgrin • Last update 2026/09/30</div>
+    <div class="credit">Created by aaronallgrin • Last update 2026/10/01</div>
 
     <section id="setupScreen" class="screen">
       <div class="panel">
@@ -1067,6 +1083,10 @@
           </div>
 
           <p id="formatNote" class="hint" hidden></p>
+
+          <p class="pass-phone-hint" id="passPhoneHint">
+            Add your name under Turn order #1, then pass the phone clockwise to the next player.
+          </p>
 
           <div id="playerForms"></div>
 
@@ -1113,6 +1133,10 @@
       <div class="panel">
         <h2>Past Games</h2>
 
+        <div class="history-toolbar">
+          <button class="ghost" type="button" id="refreshHistory">Refresh</button>
+        </div>
+
         <details class="format-filter" id="formatFilter">
           <summary><span class="format-filter-label">Formats:</span> <span id="formatFilterSummary">Commander</span></summary>
           <div class="format-filter-menu" id="formatFilterMenu"></div>
@@ -1148,10 +1172,6 @@
         </div>
 
         <div id="historyList"></div>
-
-        <div class="actions">
-          <button class="ghost" type="button" id="refreshHistory">Refresh</button>
-        </div>
       </div>
     </section>
 
@@ -1301,25 +1321,6 @@
         game_number: gameNumber,
         date: dateKey
       };
-    }
-
-    // A seat already taken by another player is disabled; tapping your own seat again frees it.
-    function refreshOrderButtons() {
-      const taken = new Map();
-      for (let i = 0; i < playerCount; i++) {
-        const value = document.getElementById(`order-${i}`).value;
-        if (value) taken.set(value, i);
-      }
-
-      for (let i = 0; i < playerCount; i++) {
-        document.querySelectorAll(`#order-label-${i} ~ .order-selector .order-btn`).forEach((btn) => {
-          const owner = taken.get(btn.dataset.order);
-          const isSelected = owner === i;
-          btn.classList.toggle("selected", isSelected);
-          btn.setAttribute("aria-pressed", String(isSelected));
-          btn.disabled = owner !== undefined && !isSelected;
-        });
-      }
     }
 
     function showToast(message, type) {
@@ -1532,13 +1533,17 @@
       playerForms.innerHTML = "";
       suggestionTimers = [];
       setupError.classList.remove("visible");
-      const orderColumns = count <= 4 ? count : Math.ceil(count / 2);
+
+      const passHint = document.getElementById("passPhoneHint");
+      passHint.textContent = count === 2
+        ? "Add your name under Turn order #1, then pass the phone to the other player."
+        : "Add your name under Turn order #1, then pass the phone clockwise to the next player.";
 
       for (let i = 0; i < count; i++) {
         const fieldset = document.createElement("fieldset");
         fieldset.className = "player-setup";
         fieldset.innerHTML = `
-          <legend>Player ${i + 1}</legend>
+          <legend>Turn order #${i + 1}</legend>
 
           <div class="field">
             <label for="name-${i}">Player name</label>
@@ -1555,29 +1560,10 @@
           ${currentFormat.deck === "commander" ? commanderFieldsHtml(i) : ""}
           ${currentFormat.deck === "theme" ? themeFieldHtml(i) : ""}
           ${currentFormat.colors ? colorPickerHtml(i) : ""}
-
-          <div class="field">
-            <label id="order-label-${i}">Turn order</label>
-            <input id="order-${i}" name="order-${i}" type="hidden" />
-            <div class="order-selector" role="group" aria-labelledby="order-label-${i}"
-              style="grid-template-columns: repeat(${orderColumns}, 1fr);">
-              ${Array.from({ length: count }, (_, n) => `
-                <button class="choice-btn order-btn" type="button" data-order="${n + 1}" aria-pressed="false">${n + 1}</button>
-              `).join("")}
-            </div>
-          </div>
         `;
 
         playerForms.appendChild(fieldset);
         fieldset.querySelector(`#name-${i}`).value = previousNames[i] || "";
-
-        const orderInput = fieldset.querySelector(`#order-${i}`);
-        fieldset.querySelectorAll(".order-btn").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            orderInput.value = orderInput.value === btn.dataset.order ? "" : btn.dataset.order;
-            refreshOrderButtons();
-          });
-        });
 
         if (currentFormat.colors) {
           const colorsInput = fieldset.querySelector(`#colors-${i}`);
@@ -1707,7 +1693,6 @@
     function validateSetup() {
       const players = [];
       const names = new Set();
-      const orders = new Set();
       const format = currentFormat;
       const valueOf = (id) => {
         const el = document.getElementById(id);
@@ -1721,7 +1706,7 @@
 
       for (let i = 0; i < playerCount; i++) {
         const name = valueOf(`name-${i}`);
-        const order = Number(valueOf(`order-${i}`));
+        const order = i + 1;
         let commander = "";
         let bracket = "";
         let colorIdentity = "";
@@ -1744,7 +1729,7 @@
           colorIdentity = format.colors ? valueOf(`colors-${i}`) : "";
         }
 
-        if (!name || !order) {
+        if (!name) {
           return "Complete every field for all players.";
         }
 
@@ -1752,12 +1737,7 @@
           return "Each player must have a unique name.";
         }
 
-        if (orders.has(order)) {
-          return `Each turn order from 1–${playerCount} can only be used once.`;
-        }
-
         names.add(name.toLowerCase());
-        orders.add(order);
 
         players.push({
           seat: order,
@@ -1771,7 +1751,6 @@
         });
       }
 
-      players.sort((a, b) => a.seat - b.seat);
       return players;
     }
 
