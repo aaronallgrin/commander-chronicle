@@ -957,28 +957,66 @@
     }
 
     .ask-setup {
-      margin-top: 8px;
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0d1017;
+    }
+
+    .ask-setup[hidden] { display: none !important; }
+
+    .ask-setup-title {
+      margin: 0 0 6px;
+      color: var(--gold-light);
+      font-size: 0.95rem;
+    }
+
+    .ask-setup-copy {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .ask-setup-copy a {
+      color: var(--gold-light);
+    }
+
+    .ask-setup-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .ask-setup-row .primary,
+    .ask-setup-row .ghost {
+      width: auto;
+      min-width: 72px;
+      min-height: 44px;
+      padding-inline: 14px;
+    }
+
+    .ask-setup-status {
+      margin: 8px 0 0;
       color: var(--muted);
       font-size: 0.78rem;
-      line-height: 1.4;
     }
 
-    .ask-setup button {
-      display: inline;
-      min-height: 0;
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: none;
-      color: var(--gold-light);
-      font-size: inherit;
+    .ask-setup-status.ready { color: var(--green); }
+
+    .ask-setup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .ask-setup-actions .ghost {
+      min-height: 36px;
+      padding: 6px 12px;
       font-weight: normal;
-      text-decoration: underline;
-    }
-
-    .ask-setup button:hover {
-      transform: none;
-      filter: none;
+      font-size: 0.82rem;
     }
 
     .format-filter {
@@ -1267,10 +1305,30 @@
           </div>
           <div class="ask-suggestions" id="askSuggestions"></div>
           <div id="askAnswer" class="ask-answer" hidden></div>
-          <p class="ask-setup" id="askSetupHint" hidden>
-            For tougher questions, this can use Google’s free Gemini model.
-            <button type="button" id="askSetupKey">Add a free API key</button>
-          </p>
+          <div class="ask-setup" id="askSetupHint" hidden>
+            <p class="ask-setup-title">Gemini setup</p>
+            <p class="ask-setup-copy">
+              Harder questions use Google’s free Gemini model.
+              Paste a key from
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
+              (saved only on this phone/browser).
+            </p>
+            <div class="ask-setup-row">
+              <input
+                id="geminiKeyInput"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Paste Gemini API key"
+              />
+              <button class="primary" type="button" id="geminiKeySave">Save</button>
+            </div>
+            <div class="ask-setup-actions">
+              <button class="ghost" type="button" id="geminiKeyClear">Clear key</button>
+              <button class="ghost" type="button" id="askSetupHide">Hide</button>
+            </div>
+            <p class="ask-setup-status" id="geminiKeyStatus"></p>
+          </div>
         </div>
 
         <div id="historyList"></div>
@@ -2386,8 +2444,54 @@
     const askSuggestionsEl = document.getElementById("askSuggestions");
     const askAnswerEl = document.getElementById("askAnswer");
     const askSetupHint = document.getElementById("askSetupHint");
+    const geminiKeyInput = document.getElementById("geminiKeyInput");
+    const geminiKeyStatus = document.getElementById("geminiKeyStatus");
     const GEMINI_KEY_STORAGE = "commander_chronicle_gemini_key";
     const GEMINI_MODEL = "gemini-3.5-flash-lite";
+
+    function getStoredGeminiKey() {
+      return (localStorage.getItem(GEMINI_KEY_STORAGE) || "").trim();
+    }
+
+    function updateGeminiKeyStatus() {
+      const hasKey = Boolean(getStoredGeminiKey());
+      geminiKeyStatus.textContent = hasKey
+        ? "Gemini key saved on this device."
+        : "No key saved on this device yet.";
+      geminiKeyStatus.classList.toggle("ready", hasKey);
+      if (!hasKey) geminiKeyInput.value = "";
+    }
+
+    function showGeminiSetup() {
+      askSetupHint.hidden = false;
+      updateGeminiKeyStatus();
+      geminiKeyInput.focus();
+    }
+
+    function hideGeminiSetup() {
+      askSetupHint.hidden = true;
+    }
+
+    function saveGeminiKey(raw) {
+      const trimmed = String(raw || "").trim();
+      if (!trimmed) {
+        showToast("Paste a Gemini API key first.", "failure");
+        geminiKeyInput.focus();
+        return false;
+      }
+      localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
+      geminiKeyInput.value = "";
+      updateGeminiKeyStatus();
+      showToast("Gemini key saved on this device.", "success");
+      return true;
+    }
+
+    function clearGeminiKey() {
+      localStorage.removeItem(GEMINI_KEY_STORAGE);
+      geminiKeyInput.value = "";
+      updateGeminiKeyStatus();
+      showToast("Gemini key cleared.", "success");
+    }
 
     historyAskSubmit.addEventListener("click", () => askAboutGames());
     historyAskInput.addEventListener("keydown", (event) => {
@@ -2397,19 +2501,28 @@
       }
     });
 
-    document.getElementById("askSetupKey").addEventListener("click", () => {
-      const current = localStorage.getItem(GEMINI_KEY_STORAGE) || "";
-      const next = window.prompt(
-        "Paste a free Gemini API key from https://aistudio.google.com/apikey\n\nLeave blank to clear the saved key.",
-        current
-      );
-      if (next == null) return;
-      const trimmed = next.trim();
-      if (trimmed) localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
-      else localStorage.removeItem(GEMINI_KEY_STORAGE);
-      askSetupHint.hidden = true;
-      showToast(trimmed ? "Gemini key saved on this device." : "Gemini key cleared.", "success");
+    document.getElementById("geminiKeySave").addEventListener("click", async () => {
+      if (!saveGeminiKey(geminiKeyInput.value)) return;
+      const pending = historyAskInput.value.trim();
+      if (pending) askAboutGames();
     });
+
+    document.getElementById("geminiKeyClear").addEventListener("click", () => {
+      clearGeminiKey();
+    });
+
+    document.getElementById("askSetupHide").addEventListener("click", () => {
+      hideGeminiSetup();
+    });
+
+    geminiKeyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        document.getElementById("geminiKeySave").click();
+      }
+    });
+
+    updateGeminiKeyStatus();
 
     // quiet: refresh in the background (used for game numbering) without clearing the list or
     // showing an error if the sheet can't be reached.
@@ -2925,21 +3038,25 @@
     }
 
     async function askGeminiViaAppsScript(question) {
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "ask", question })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const url = `${GOOGLE_APPS_SCRIPT_URL}?action=ask&question=${encodeURIComponent(question)}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Apps Script HTTP ${response.status}`);
       const data = await response.json();
-      if (data.needs_key) return { needsKey: true };
-      if (!data.success) throw new Error(data.error || "Ask failed");
+      if (data.needs_key) return { needsKey: true, reason: "apps_script_needs_key" };
+      if (!data.success) {
+        const err = String(data.error || "Ask failed");
+        // Old deployments don't know action=ask yet.
+        if (/unknown action/i.test(err)) {
+          return { needsKey: true, reason: "apps_script_outdated" };
+        }
+        throw new Error(err);
+      }
       return { text: String(data.answer || "").trim(), source: "Gemini" };
     }
 
     async function askGeminiDirect(question, rows) {
-      const key = localStorage.getItem(GEMINI_KEY_STORAGE);
-      if (!key) return { needsKey: true };
+      const key = getStoredGeminiKey();
+      if (!key) return { needsKey: true, reason: "device_needs_key" };
 
       const context = buildAskContext(rows.length ? rows : cachedHistoryRows);
       const response = await fetch(
@@ -2974,13 +3091,19 @@
     }
 
     async function askWithLlm(question, rows) {
+      // Prefer a key saved on this device — works even before Apps Script is redeployed.
+      if (getStoredGeminiKey()) {
+        return askGeminiDirect(question, rows);
+      }
+
       try {
         const proxied = await askGeminiViaAppsScript(question);
         if (!proxied.needsKey) return proxied;
+        return proxied;
       } catch (error) {
         console.warn("Apps Script ask unavailable:", error);
+        return { needsKey: true, reason: "apps_script_unavailable", detail: error.message };
       }
-      return askGeminiDirect(question, rows);
     }
 
     function setAskAnswer(text, { loading = false, source = "" } = {}) {
@@ -3030,7 +3153,7 @@
       const rows = rowsForAsk(question);
       const deterministic = answerDeterministic(question, rows);
       if (deterministic) {
-        askSetupHint.hidden = true;
+        hideGeminiSetup();
         setAskAnswer(deterministic.text, { source: "stats" });
         return;
       }
@@ -3040,19 +3163,24 @@
       try {
         const result = await askWithLlm(question, rows);
         if (result.needsKey) {
-          askSetupHint.hidden = false;
+          showGeminiSetup();
+          const detail = result.reason === "apps_script_outdated"
+            ? "The Apps Script web app still needs the latest Code.gs redeployed (Deploy → Manage deployments → New version)."
+            : result.reason === "apps_script_needs_key"
+              ? "Apps Script is reachable, but GEMINI_API_KEY is not set in Project Settings → Script properties."
+              : "Paste your Gemini API key below and tap Save — it stays on this phone only.";
           setAskAnswer(
-            "That question needs the free Gemini fallback.\n\nAdd a Gemini API key on this device, or set GEMINI_API_KEY in the Apps Script project properties after updating Code.gs.\n\nMeanwhile, try a suggested question below."
+            `That question needs Gemini.\n\n${detail}\n\nSuggested questions above still work without a key.`
           );
           return;
         }
-        askSetupHint.hidden = true;
+        hideGeminiSetup();
         setAskAnswer(result.text, { source: result.source || "Gemini" });
       } catch (error) {
         console.error("Ask failed:", error);
-        askSetupHint.hidden = !localStorage.getItem(GEMINI_KEY_STORAGE);
+        showGeminiSetup();
         setAskAnswer(
-          `Couldn't answer that yet (${error.message || "unknown error"}).\n\nTry one of the suggested questions, or check the Gemini key / Apps Script ask setup.`
+          `Couldn't answer that yet (${error.message || "unknown error"}).\n\nCheck the key below, or try a suggested question.`
         );
       } finally {
         historyAskSubmit.disabled = false;

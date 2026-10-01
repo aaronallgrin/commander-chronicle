@@ -6,12 +6,14 @@
  * web app (Deploy > Manage deployments > edit > New version).
  *
  *   doPost: saves one row per player sent by the app, and decides the game's final match ID.
- *            Also answers Ask questions when the body is `{ action: "ask", question }` and
- *            GEMINI_API_KEY is set in Script properties.
+ *            Also answers Ask questions when the body is `{ action: "ask", question }`.
  *   doGet ?action=history: returns every saved row for the Past Games screen.
+ *   doGet ?action=ask&question=...: Gemini Ask answers (preferred; avoids POST redirect issues).
  *
- * For Gemini Ask answers, set Project Settings > Script properties:
+ * For shared Gemini Ask answers, set Project Settings > Script properties:
  *   GEMINI_API_KEY = your free key from https://aistudio.google.com/apikey
+ * Then Deploy > Manage deployments > edit (pencil) > New version > Deploy.
+ * Editing Code.gs alone is not enough — a new deployment version is required.
  *
  * Match IDs look like 2026_09_30_01 (date, then that day's game number) and are never reused:
  * the app suggests one, and doPost moves the game to the next free number for that date if the
@@ -284,6 +286,19 @@ function askSystemPrompt_() {
   ].join(" ");
 }
 
+function readAskContext_() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet_();
+    const headers = getHeaders_(sheet);
+    const records = sheet.getLastRow() < 2 ? [] : readRecords_(sheet, headers);
+    return buildAskContext_(records.map((record) => record.item));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function handleAsk_(body) {
   const question = String(body.question || "").trim();
   if (!question) {
@@ -299,11 +314,7 @@ function handleAsk_(body) {
     });
   }
 
-  const sheet = getSheet_();
-  const headers = getHeaders_(sheet);
-  const records = sheet.getLastRow() < 2 ? [] : readRecords_(sheet, headers);
-  const rows = records.map((record) => record.item);
-  const context = buildAskContext_(rows);
+  const context = readAskContext_();
 
   const payload = {
     contents: [{
@@ -404,8 +415,16 @@ function doPost(e) {
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : "";
 
+  if (action === "ask") {
+    try {
+      return handleAsk_({ question: e.parameter.question || "" });
+    } catch (error) {
+      return json_({ success: false, error: String(error) });
+    }
+  }
+
   if (action !== "history") {
-    return json_({ success: false, error: "Unknown action. Use ?action=history." });
+    return json_({ success: false, error: "Unknown action. Use ?action=history or ?action=ask." });
   }
 
   const lock = LockService.getScriptLock();

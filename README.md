@@ -34,8 +34,8 @@ Past Games shows only Commander games by default. **Refresh** sits under the hea
 
 Gemini setup (either works):
 
-1. **Shared for everyone:** after pasting the latest [`apps-script/Code.gs`](apps-script/Code.gs) and redeploying the web app, set Script property `GEMINI_API_KEY` to a free key from [Google AI Studio](https://aistudio.google.com/apikey).
-2. **This device only:** tap **Add a free API key** under the Ask box and paste the same kind of key (stored in `localStorage`).
+1. **This device only (easiest):** when Ask needs Gemini, a key box appears under the question. Paste a free key from [Google AI Studio](https://aistudio.google.com/apikey) and tap **Save**. It stays in that phone’s browser only.
+2. **Shared for everyone:** paste the latest [`apps-script/Code.gs`](apps-script/Code.gs), set Script property `GEMINI_API_KEY`, then **Deploy → Manage deployments → edit (pencil) → New version → Deploy**. Editing the script without a new deployment version will not update the live web app.
 
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
@@ -79,13 +79,13 @@ Each row looks like:
 
 ## Google Apps Script
 
-The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint. Ask fallbacks that use the shared Gemini key POST `{ "action": "ask", "question": "..." }` to that same URL.
+The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint. Shared Gemini Ask uses `GET ?action=ask&question=...` on that same URL (the app can also fall back to a key saved on the device).
 
 Replace that constant if you deploy your own script.
 
 ### Setting up the script
 
-The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (returns history for the Past Games screen).
+The backend is in [`apps-script/Code.gs`](apps-script/Code.gs). It has `doPost` (saves games) and `doGet` (`history` for Past Games, `ask` for Gemini).
 
 Match IDs are the date followed by that day's game number (`2026_09_30_01`, `2026_09_30_02`, ...) and are never reused. The app suggests the next number from the sheet's history, but `doPost` has the final say: if the suggested ID is already taken (for example by a game just recorded on another device), it saves the game under the next free number and the app shows that ID. Sending the same game twice only saves it once. Any duplicate IDs already in the sheet are renumbered automatically on the next save or history load, or you can run `fixDuplicateGameIds` from the Apps Script editor.
 
