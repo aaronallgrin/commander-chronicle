@@ -32,10 +32,16 @@ Past Games shows only Commander games by default. **Refresh** sits under the hea
 
 **Ask about your games** replaces the old player-name filter. Common questions (who wins the most, a player's win history, most recent game, best commanders, win rates, average win turn, including cEDH / bracket / format scopes) are answered from the sheet with a small stats script. Anything else falls back to Google's free **Gemini** model, using your game log plus general Magic / Scryfall knowledge.
 
-Gemini setup (either works):
+Gemini setup is shared. Phones do not get their own key. Common questions are answered from the sheet. Anything else is sent to the Apps Script web app, which calls Gemini with the script property `GEMINI_API_KEY`.
 
-1. **This device only (easiest):** when Ask needs Gemini, a key box appears under the question. Paste a free key from [Google AI Studio](https://aistudio.google.com/apikey) and tap **Save**. It stays in that phone’s browser only.
-2. **Shared for everyone:** paste the latest [`apps-script/Code.gs`](apps-script/Code.gs) (and keep the `oauthScopes` from [`apps-script/appsscript.json`](apps-script/appsscript.json) under Project Settings → Show `appsscript.json`). Set Script property `GEMINI_API_KEY`. Run `authorizeUrlFetch` once from the editor and approve external requests. Then **Deploy → Manage deployments → edit (pencil) → New version → Deploy**. Editing the script without a new deployment version will not update the live web app.
+That key is already enough only after the script is allowed to call out. If Ask says Google is blocking the script, do this once:
+
+1. Paste the latest [`apps-script/Code.gs`](apps-script/Code.gs), and keep the `oauthScopes` from [`apps-script/appsscript.json`](apps-script/appsscript.json) (Project Settings → Show `appsscript.json`).
+2. Set Script property `GEMINI_API_KEY` if it is not set yet.
+3. In the editor, select `authorizeUrlFetch` → **Run**, then approve “Connect to an external service”.
+4. **Deploy → Manage deployments → edit (pencil) → New version → Deploy**.
+
+Editing the script without a new deployment version will not update the live web app. A key box can still appear on a phone if the shared call fails for some other reason; it is not required for normal Ask.
 
 Avg Win Turn uses each won game's `win_turn`. If that's blank (common in older data), it uses the last `eliminated_turn` in that game instead. Games with no winner, draws, and games with neither turn recorded are left out.
 
@@ -79,7 +85,7 @@ Each row looks like:
 
 ## Google Apps Script
 
-The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint. Shared Gemini Ask uses `GET ?action=ask&question=...` on that same URL (the app can also fall back to a key saved on the device).
+The POST URL lives at the top of `index.html` as `GOOGLE_APPS_SCRIPT_URL`. History is loaded with `GET ?action=history` against the same endpoint. Shared Gemini Ask uses `GET ?action=ask&question=...` on that same URL. The app always tries that shared call first. A key saved on a phone is not how Ask is meant to work.
 
 Replace that constant if you deploy your own script.
 
