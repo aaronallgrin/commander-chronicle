@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0d12" />
+  <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Commander Chronicle</title>
@@ -13,18 +13,18 @@
 
   <style>
     :root {
-      --bg: #0b0d12;
-      --panel: #151924;
-      --panel-2: #1d2230;
-      --border: #343b50;
-      --text: #f1ead9;
-      --muted: #9ca4b7;
-      --gold: #d7a94b;
-      --gold-light: #f1d078;
-      --red: #d35f68;
-      --green: #72c58d;
-      --purple: #8e74d6;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      --bg: #000000;
+      --panel: #292929;
+      --panel-2: #1b1b1b;
+      --border: #3a3a3a;
+      --text: #ffffff;
+      --muted: #808080;
+      --gold: #ffa31a;
+      --gold-light: #ffa31a;
+      --red: #ff4d4d;
+      --green: #3ddc84;
+      --purple: #c4b5fd;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
     }
 
     * { box-sizing: border-box; }
@@ -40,8 +40,8 @@
       margin: 0;
       color: var(--text);
       background:
-        radial-gradient(circle at 10% 0%, rgba(142, 116, 214, 0.16), transparent 32rem),
-        radial-gradient(circle at 100% 20%, rgba(215, 169, 75, 0.1), transparent 28rem),
+        radial-gradient(circle at 8% 0%, rgba(255, 163, 26, 0.18), transparent 26rem),
+        radial-gradient(circle at 100% 18%, rgba(255, 163, 26, 0.08), transparent 22rem),
         var(--bg);
       font-family: Georgia, "Times New Roman", serif;
     }
@@ -123,7 +123,7 @@
     .panel, .player-setup, .player-card, .summary-card {
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
+      background: var(--panel);
       box-shadow: var(--shadow);
     }
 
@@ -159,13 +159,13 @@
       padding: 10px 12px;
       outline: none;
       color: var(--text);
-      background: #0d1017;
+      background: #000000;
       font-size: 16px;
     }
 
     input:focus, select:focus, textarea:focus {
       border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(215, 169, 75, 0.14);
+      box-shadow: 0 0 0 3px rgba(255, 163, 26, 0.28);
     }
 
     .autocomplete { position: relative; }
@@ -181,7 +181,7 @@
       overflow-y: auto;
       border: 1px solid var(--border);
       border-radius: 10px;
-      background: #11151f;
+      background: #1b1b1b;
       box-shadow: var(--shadow);
     }
 
@@ -192,7 +192,7 @@
       width: 100%;
       padding: 11px 12px;
       text-align: left;
-      border-bottom: 1px solid rgba(52, 59, 80, 0.65);
+      border-bottom: 1px solid #3a3a3a;
       background: transparent;
       color: var(--text);
     }
@@ -228,13 +228,14 @@
 
     .primary {
       width: 100%;
-      color: #211807;
-      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #000000;
+      background: var(--gold);
     }
 
     .secondary {
-      color: #171324;
-      background: var(--purple);
+      color: #ffffff;
+      background: #000000;
+      border: 1px solid var(--gold);
     }
 
     .ghost {
@@ -263,7 +264,7 @@
     .error {
       display: none;
       margin: 12px 0 0;
-      color: #ff9a9d;
+      color: #ff6b6b;
       line-height: 1.4;
     }
 
@@ -306,7 +307,7 @@
       padding: 15px;
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
+      background: var(--panel);
       box-shadow: none;
     }
 
@@ -331,8 +332,8 @@
       margin: 7px 5px 0 0;
       padding: 3px 7px;
       border-radius: 20px;
-      color: #16120c;
-      background: var(--gold-light);
+      color: #000000;
+      background: var(--gold);
       font-family: system-ui, sans-serif;
       font-size: 0.7rem;
       font-weight: bold;
@@ -402,7 +403,7 @@
       border: 1px solid var(--gold);
       border-radius: 16px;
       background:
-        radial-gradient(circle at center, rgba(215, 169, 75, 0.19), transparent 65%),
+        radial-gradient(circle at center, rgba(255, 163, 26, 0.22), transparent 65%),
         var(--panel);
     }
 
@@ -448,8 +449,8 @@
       transform: translateY(0);
     }
 
-    .toast.success { background: #238b55; }
-    .toast.failure { background: #b83f4a; }
+    .toast.success { background: var(--green); color: #000000; }
+    .toast.failure { background: var(--red); color: #000000; }
 
     .toast-icon {
       display: inline-grid;
@@ -467,7 +468,7 @@
       color: inherit;
       font-size: inherit;
       text-align: left;
-      text-decoration: underline dotted rgba(156, 164, 183, 0.6);
+      text-decoration: underline dotted rgba(128, 128, 128, 0.8);
       text-underline-offset: 3px;
     }
 
@@ -586,7 +587,7 @@
 
     .player-count-btn.selected {
       border-color: var(--gold);
-      background: rgba(215, 169, 75, 0.15);
+      background: rgba(255, 163, 26, 0.16);
       color: var(--gold-light);
     }
 
@@ -687,7 +688,7 @@
 
     .choice-btn.selected {
       border-color: var(--gold);
-      background: rgba(215, 169, 75, 0.15);
+      background: rgba(255, 163, 26, 0.16);
       color: var(--gold-light);
     }
 
@@ -710,12 +711,12 @@
 
     .draw-player-option:hover {
       border-color: var(--gold);
-      background: rgba(215, 169, 75, 0.1);
+      background: rgba(255, 163, 26, 0.1);
     }
 
     .draw-player-option:has(input:checked) {
       border-color: var(--gold);
-      background: rgba(215, 169, 75, 0.15);
+      background: rgba(255, 163, 26, 0.16);
     }
 
     .draw-player-option input[type="checkbox"],
@@ -741,7 +742,7 @@
       padding: 16px;
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: linear-gradient(145deg, rgba(29, 34, 48, 0.97), rgba(15, 18, 27, 0.97));
+      background: var(--panel);
       box-shadow: var(--shadow);
     }
 
@@ -794,7 +795,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 7px 0;
-      border-bottom: 1px solid rgba(52, 59, 80, 0.45);
+      border-bottom: 1px solid #3a3a3a;
       font-size: 0.88rem;
       gap: 8px;
     }
@@ -924,7 +925,7 @@
     .ask-chip:hover {
       border-color: var(--gold);
       color: var(--text);
-      background: #1a2030;
+      background: #000000;
       transform: none;
       filter: none;
     }
@@ -934,7 +935,7 @@
       padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background: #0d1017;
+      background: #000000;
       color: var(--text);
       line-height: 1.5;
       white-space: pre-wrap;
@@ -961,7 +962,7 @@
       padding: 12px;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background: #0d1017;
+      background: #000000;
     }
 
     .ask-setup[hidden] { display: none !important; }
@@ -1055,7 +1056,7 @@
       padding: 8px;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background: #11151f;
+      background: #1b1b1b;
       box-shadow: var(--shadow);
     }
 
@@ -2359,7 +2360,7 @@
       if (!savingGame || !savingGame.rows || !savingGame.rows.length) return false;
 
       if (!GOOGLE_APPS_SCRIPT_URL) {
-        setSaveStatus("Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.", "#ff9a9d");
+        setSaveStatus("Add your Google Apps Script web app URL to GOOGLE_APPS_SCRIPT_URL first.", "#ff6b6b");
         showToast("Google Apps Script URL is not configured.", "failure");
         return false;
       }
@@ -2391,7 +2392,7 @@
       } catch (error) {
         console.error("Save failed:", error);
         if (isCurrent()) {
-          setSaveStatus("Game save failed. Check your connection and try again.", "#ff9a9d");
+          setSaveStatus("Game save failed. Check your connection and try again.", "#ff6b6b");
           retry.hidden = false;
         }
         showToast("Game save failed.", "failure");
