@@ -1177,7 +1177,7 @@
       <p class="subtitle">Record the battle. Remember the legend.</p>
     </header>
 
-    <div class="credit">Created by aaronallgrin • v2026.10.06</div>
+    <div class="credit">created by aaronallgrin • v2026.10.06</div>
 
     <section id="setupScreen" class="screen">
       <div class="panel">
@@ -2885,6 +2885,72 @@
       return questionFormatFilter(question) ? "in the matching games" : "across all saved games";
     }
 
+    function ordinal(n) {
+      const mod100 = n % 100;
+      const suffix = mod100 >= 11 && mod100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th";
+      return `${n}${suffix}`;
+    }
+
+    // "Which starting turn is best" is about seat, not the turn number a game ended on.
+    function asksAboutStartingSeat(q) {
+      if (/\bavg(erage)?\b.*\bwin turns?\b|\bwin turns?\b.*\bavg(erage)?\b|\baverage win turn\b/.test(q)) return false;
+      return /\b(seats?|starting (player|position|turn|seat)|goes first|go first|going first|turn order|first player)\b/.test(q);
+    }
+
+    function seatWinStats(rows) {
+      const bySeat = new Map();
+      let recorded = 0;
+      let skipped = 0;
+      groupGames(rows).forEach(([, players]) => {
+        const seated = players.filter((p) => turnNumber(p.turn_order));
+        if (seated.length < 2) {
+          skipped += 1;
+          return;
+        }
+        recorded += 1;
+        const seen = new Set();
+        seated.forEach((row) => {
+          const seat = turnNumber(row.turn_order);
+          if (seen.has(seat)) return;
+          seen.add(seat);
+          if (!bySeat.has(seat)) bySeat.set(seat, { seat, games: 0, wins: 0 });
+          const entry = bySeat.get(seat);
+          entry.games += 1;
+          if (isTrueWin(row)) entry.wins += 1;
+        });
+      });
+      return {
+        stats: [...bySeat.values()].sort((a, b) => a.seat - b.seat),
+        recorded,
+        skipped
+      };
+    }
+
+    function formatSeatWinAnswer(rows, question) {
+      const { stats, recorded, skipped } = seatWinStats(rows);
+      const where = scopeLabel(question, rows);
+      if (!recorded) {
+        return skipped
+          ? `No starting seat is recorded ${where}. ${skipped} older game${skipped === 1 ? "" : "s"} ${skipped === 1 ? "has" : "have"} no turn order.`
+          : `No starting seat is recorded ${where}.`;
+      }
+      const lines = stats.map((s) => {
+        const rate = s.games ? Math.round((s.wins / s.games) * 100) : 0;
+        return `${ordinal(s.seat)} — ${s.wins} win${s.wins === 1 ? "" : "s"} in ${s.games} game${s.games === 1 ? "" : "s"} · ${rate}%`;
+      });
+      const bestRate = Math.max(...stats.map((s) => (s.games ? s.wins / s.games : 0)));
+      const leaders = stats.filter((s) => s.games && s.wins / s.games === bestRate && s.wins > 0);
+      const lead = !leaders.length
+        ? "No wins are recorded from a known starting seat."
+        : leaders.length === 1
+          ? `${ordinal(leaders[0].seat)} has the best win rate.`
+          : `${leaders.map((s) => ordinal(s.seat)).join(" and ")} are tied for the best win rate.`;
+      const omitted = skipped
+        ? `\n\n${skipped} older game${skipped === 1 ? "" : "s"} with no turn order ${skipped === 1 ? "is" : "are"} left out.`
+        : "";
+      return `Starting seat ${where} (1st goes first):\n${lead}\n\n${lines.join("\n")}${omitted}`;
+    }
+
     function answerDeterministic(question, rows) {
       const q = normalizeAskText(question);
       if (!q) return null;
@@ -2969,6 +3035,10 @@
         return { text: lines.join("\n") };
       }
 
+      if (asksAboutStartingSeat(q)) {
+        return { text: formatSeatWinAnswer(rows, question) };
+      }
+
       if (/\bwho wins?\b|\bmost wins?\b|\bwin leader\b|\bwinningest\b|\bmost victories\b|\bwho has the most\b/.test(q)) {
         const stats = playerGameStats(rows).filter((s) => s.wins > 0);
         if (!stats.length) return { text: `No wins recorded ${scopeLabel(question, rows)}.` };
@@ -3007,7 +3077,7 @@
             commander: String(p.commander_name || ""),
             colors: String(p.color_identity || ""),
             bracket: format.deck === "commander" ? (BRACKET_NAMES[String(p.bracket)] || String(p.bracket || "")) : "",
-            seat: turnNumber(p.turn_order),
+            starting_seat: turnNumber(p.turn_order),
             eliminated_turn: turnNumber(p.eliminated_turn),
             win: isTrueWin(p),
             draw: isDrawRow(p),
@@ -3024,6 +3094,7 @@
         },
         leaderboard: playerGameStats(rows).slice(0, 12),
         commanders: commanderWinStats(rows).slice(0, 12),
+        seat_win_rates: seatWinStats(rows),
         recent_games: recent
       };
     }
@@ -3035,7 +3106,8 @@
         "You may use Scryfall-level and general Magic knowledge for card/strategy context, but never invent games, wins, or players that are not in the data.",
         "If the data is incomplete for the question, say what is missing.",
         "Keep answers concise and concrete. Prefer short paragraphs or bullet-like lines.",
-        "cEDH means Commander bracket 5 in this app."
+        "cEDH means Commander bracket 5 in this app.",
+        "starting_seat is who went first: 1, then 2, and so on around the table. A blank starting seat means that game was saved before turn order was recorded. Use seat_win_rates for those questions, and do not say the log does not track starting position when that summary is present."
       ].join(" ");
     }
 
@@ -3130,7 +3202,8 @@
         "Who wins the most cEDH?",
         `${topName}'s win history`,
         "Most recent game",
-        "Best winning commander"
+        "Best winning commander",
+        "Best starting seat"
       ];
       askSuggestionsEl.innerHTML = suggestions.map((text) =>
         `<button class="ask-chip" type="button" data-ask="${escapeHtml(text)}">${escapeHtml(text)}</button>`
