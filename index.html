@@ -3165,18 +3165,28 @@
     }
 
     async function askWithLlm(question, rows) {
-      // Prefer a key saved on this device — works even before Apps Script is redeployed.
-      if (getStoredGeminiKey()) {
-        return askGeminiDirect(question, rows);
-      }
-
+      // The shared script is the real path. A key saved on the phone is only a last resort
+      // when that script is down for some other reason. A missing UrlFetch permission is not
+      // that case: the script has the key and is refusing to call Gemini.
       try {
         const proxied = await askGeminiViaAppsScript(question);
         if (!proxied.needsKey) return proxied;
+        if (getStoredGeminiKey()) return askGeminiDirect(question, rows);
         return proxied;
       } catch (error) {
         console.warn("Apps Script ask unavailable:", error);
-        return { needsKey: true, reason: "apps_script_unavailable", detail: error.message };
+        const detail = String(error.message || error);
+        if (/external_request|UrlFetchApp/i.test(detail)) {
+          return { needsAuth: true, detail };
+        }
+        if (getStoredGeminiKey()) {
+          try {
+            return await askGeminiDirect(question, rows);
+          } catch (directError) {
+            return { needsKey: true, reason: "apps_script_unavailable", detail: directError.message || detail };
+          }
+        }
+        return { needsKey: true, reason: "apps_script_unavailable", detail };
       }
     }
 
@@ -3237,6 +3247,13 @@
       historyAskSubmit.disabled = true;
       try {
         const result = await askWithLlm(question, rows);
+        if (result.needsAuth) {
+          hideGeminiSetup();
+          setAskAnswer(
+            "Ask has never been able to call Gemini by itself. The script already has the key, but Google has not allowed that script to connect to Gemini, so this phone was asked for a key instead.\n\nOne-time fix in Apps Script, not on this phone:\n1. Extensions → Apps Script\n2. Project Settings → show appsscript.json, and include https://www.googleapis.com/auth/script.external_request\n3. Choose authorizeUrlFetch → Run → Allow “Connect to an external service”\n4. Deploy → Manage deployments → pencil → New version → Deploy\n\nThen ask again here."
+          );
+          return;
+        }
         if (result.needsKey) {
           showGeminiSetup();
           const detail = result.reason === "apps_script_outdated"
