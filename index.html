@@ -2438,6 +2438,7 @@
     });
 
     document.getElementById("refreshHistory").addEventListener("click", () => {
+      clearAsk();
       loadHistory();
     });
 
@@ -2468,6 +2469,18 @@
       askSetupHint.hidden = false;
       updateGeminiKeyStatus();
       geminiKeyInput.focus();
+    }
+
+    let askGeneration = 0;
+
+    function clearAsk() {
+      askGeneration += 1;
+      historyAskInput.value = "";
+      askAnswerEl.hidden = true;
+      askAnswerEl.classList.remove("loading");
+      askAnswerEl.textContent = "";
+      hideGeminiSetup();
+      historyAskSubmit.disabled = false;
     }
 
     function hideGeminiSetup() {
@@ -3235,6 +3248,7 @@
         return;
       }
 
+      const generation = askGeneration;
       const rows = rowsForAsk(question);
       const deterministic = answerDeterministic(question, rows);
       if (deterministic) {
@@ -3247,6 +3261,7 @@
       historyAskSubmit.disabled = true;
       try {
         const result = await askWithLlm(question, rows);
+        if (generation !== askGeneration) return;
         if (result.needsAuth) {
           hideGeminiSetup();
           setAskAnswer(
@@ -3275,7 +3290,7 @@
           `Couldn't answer that yet (${error.message || "unknown error"}).\n\nCheck the key below, or try a suggested question.`
         );
       } finally {
-        historyAskSubmit.disabled = false;
+        if (generation === askGeneration) historyAskSubmit.disabled = false;
       }
     }
 
