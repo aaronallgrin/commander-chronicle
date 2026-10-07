@@ -253,7 +253,7 @@ function buildAskContext_(rows) {
       commander: String(p.commander_name || ""),
       colors: String(p.color_identity || ""),
       bracket: BRACKET_NAMES[String(p.bracket)] || String(p.bracket || ""),
-      seat: p.turn_order,
+      starting_seat: p.turn_order,
       eliminated_turn: p.eliminated_turn,
       win: truthy_(p.win) && !truthy_(p.draw),
       draw: truthy_(p.draw),
@@ -273,6 +273,27 @@ function buildAskContext_(rows) {
     })
     .slice(0, 12);
 
+  const seats = {};
+  let seatedGames = 0;
+  let unseatedGames = 0;
+  games.forEach((game) => {
+    const seated = game.players.filter((row) => Number(row.turn_order) > 0);
+    if (seated.length < 2) {
+      unseatedGames += 1;
+      return;
+    }
+    seatedGames += 1;
+    const seen = {};
+    seated.forEach((row) => {
+      const seat = Number(row.turn_order);
+      if (seen[seat]) return;
+      seen[seat] = true;
+      if (!seats[seat]) seats[seat] = { starting_seat: seat, games: 0, wins: 0 };
+      seats[seat].games += 1;
+      if (truthy_(row.win) && !truthy_(row.draw)) seats[seat].wins += 1;
+    });
+  });
+
   return {
     totals: {
       games: games.length,
@@ -281,6 +302,11 @@ function buildAskContext_(rows) {
     },
     leaderboard: leaderboardList,
     commanders: commanderList,
+    seat_win_rates: {
+      games_with_turn_order: seatedGames,
+      games_without_turn_order: unseatedGames,
+      seats: Object.keys(seats).map((key) => seats[key]).sort((a, b) => a.starting_seat - b.starting_seat)
+    },
     recent_games: recent
   };
 }
@@ -292,7 +318,8 @@ function askSystemPrompt_() {
     "You may use Scryfall-level and general Magic knowledge for card/strategy context, but never invent games, wins, or players that are not in the data.",
     "If the data is incomplete for the question, say what is missing.",
     "Keep answers concise and concrete. Prefer short paragraphs or bullet-like lines.",
-    "cEDH means Commander bracket 5 in this app."
+    "cEDH means Commander bracket 5 in this app.",
+    "starting_seat is who went first: 1, then 2, and so on around the table. A blank starting seat means that game was saved before turn order was recorded. Use seat_win_rates for those questions, and do not say the log does not track starting position when that summary is present."
   ].join(" ");
 }
 

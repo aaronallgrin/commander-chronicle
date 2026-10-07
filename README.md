@@ -30,7 +30,7 @@ npm run preview
 
 Past Games shows only Commander games by default. **Refresh** sits under the heading so you can reload the sheet without scrolling. The **Formats** dropdown has a checkbox for each format, plus **Select all** to check or clear them all. The stats and list follow the chosen formats, and each card shows its format whenever anything besides Commander is checked.
 
-**Ask about your games** replaces the old player-name filter. Common questions (who wins the most, a player's win history, most recent game, best commanders, win rates, average win turn, including cEDH / bracket / format scopes) are answered from the sheet with a small stats script. Anything else falls back to Google's free **Gemini** model, using your game log plus general Magic / Scryfall knowledge.
+**Ask about your games** replaces the old player-name filter. Common questions (who wins the most, a player's win history, most recent game, best commanders, win rates, average win turn, best starting seat, including cEDH / bracket / format scopes) are answered from the sheet with a small stats script. Anything else falls back to Google's free **Gemini** model, using your game log plus general Magic / Scryfall knowledge.
 
 Gemini setup (either works):
 
